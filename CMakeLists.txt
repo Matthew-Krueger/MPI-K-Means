@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(montecarlo_pi)
+project(kmeans_mpi)
 
 set(CMAKE_CXX_STANDARD 23)
 
@@ -12,6 +12,7 @@ find_package(Boost 1.82.0 COMPONENTS mpi serialization REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
 
-add_executable(montecarlo_pi )
+add_executable(kmeans_mpi
+        src/main.cpp)
 
-target_link_libraries(montecarlo_pi PRIVATE MPI::MPI_CXX)
+target_link_libraries(kmeans_mpi PRIVATE MPI::MPI_CXX ${Boost_LIBRARIES})
