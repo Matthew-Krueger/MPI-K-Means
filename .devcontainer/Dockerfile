@@ -1,4 +1,4 @@
-FROM debian:trixie-slim
+FROM debian:trixie
 
 # Install essential packages
 RUN apt-get update && \
