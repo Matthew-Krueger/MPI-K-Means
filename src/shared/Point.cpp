@@ -36,7 +36,7 @@ namespace kmeans{
             other.m_Data.begin(),
             0.0,
             std::plus<double>(),
-            [squaredifference](auto first, auto second){ return squaredifference(first,second); }
+            squaredifference
         );
 
         return std::sqrt(totalSum);
@@ -50,12 +50,18 @@ namespace kmeans{
             return std::unexpected("No points provided");
         }
 
-        // Validate that all points have the same dimensionality.
+        // Get the first point's dimensionality, which becomes the expected dimensionality
         const size_t expectedNumberDimensions = points[0].m_Data.size();
+
+        if (expectedNumberDimensions == 0) {
+            return std::unexpected("Expected Dimensionality cannot be zero");
+        }
+
         // Check if all points in the vector have the expected number of dimensions.
         bool allHaveRequiredNumberDimensions = std::all_of(points.begin(), points.end(), [expectedNumberDimensions](const Point& point) {
             return expectedNumberDimensions == point.m_Data.size();
         });
+
         // Return an error if not all points have the same number of dimensions.
         if (!allHaveRequiredNumberDimensions) {
             return std::unexpected("All points must have the same number of dimensions");
@@ -82,9 +88,12 @@ namespace kmeans{
         // Check if the actual size of the flattened points vector matches the expected total entries.
         if (flattenedPoints.points.size() != totalEntries) {
             return std::unexpected(
-                "Illogical number of points or dimensionality. Expected " +
-                std::to_string(totalEntries) + " points, but got " + std::to_string(flattenedPoints.points.size()) + " instead. "
-                "Should have " + std::to_string(flattenedPoints.numPoints) + " points and " + std::to_string(flattenedPoints.numDimensionsPerPoint) + " dimensions per point");
+               "Flattened points vector size mismatch. Expected " +
+               std::to_string(totalEntries) + " (" +
+               std::to_string(flattenedPoints.numPoints) + " points * " +
+               std::to_string(flattenedPoints.numDimensionsPerPoint) + " dims) but got " +
+               std::to_string(flattenedPoints.points.size()) + "."
+           );
         }
 
         // result: A vector to store the unflattened Point objects.

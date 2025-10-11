@@ -65,7 +65,7 @@ namespace kmeans{
          * @brief Gets the underlying data vector of the point.
          * @return A const reference to the internal std::vector<double> representing the point's coordinates.
          */
-        const std::vector<double>& getData() { return m_Data; };
+        const std::vector<double>& getData() const { return m_Data; };
 
         /**
          * @brief Sets the underlying data vector of the point.
