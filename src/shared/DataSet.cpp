@@ -6,8 +6,7 @@
 
 #include <boost/random/normal_distribution.hpp>
 #include <boost/random/variate_generator.hpp>
-#include <__ranges/iota_view.h>
-#include <__ranges/transform_view.h>
+#include <ranges>
 
 namespace kmeans {
     DataSet::DataSet(const Config& config) {
