@@ -4,10 +4,13 @@
 
 #ifndef KMEANS_MPI_POINT_HPP
 #define KMEANS_MPI_POINT_HPP
+#include <utility>
 #include <vector>
 #include <cstddef>
 #include <expected>
 #include <string>
+#include <iostream>
+#include <boost/serialization/access.hpp>
 
 namespace kmeans{
     class Point{
@@ -31,13 +34,13 @@ namespace kmeans{
 
         Point() = default;
 
-        Point(std::vector<double> data) noexcept: m_Data(std::move(data)){}
+        explicit Point(std::vector<double> data) noexcept: m_Data(std::move(data)){}
 
         /**
          * @brief Copy constructor.
          * @param other The Point object to copy from.
          */
-        Point(const Point& other) : m_Data{other.m_Data}{}
+        Point(const Point& other) = default;
 
         /**
          * @brief Move constructor.
@@ -89,13 +92,69 @@ namespace kmeans{
         using const_iterator = std::vector<double>::const_iterator;
 
         inline iterator begin() { return m_Data.begin(); }
-        inline const_iterator begin() const { return m_Data.begin(); }
+        [[nodiscard]] inline const_iterator begin() const { return m_Data.begin(); }
         inline iterator end() { return m_Data.end(); }
-        inline const_iterator end() const { return m_Data.end(); }
+        [[nodiscard]] inline const_iterator end() const { return m_Data.end(); }
+
+
+        friend class boost::serialization::access;
+        template<class Archive>
+        void serialize(Archive &ar, const unsigned int version) {
+            ar & m_Data;
+        }
 
     private:
         std::vector<double> m_Data;
     };
+
+    inline std::ostream& operator<<(std::ostream& os, const Point& point) {
+
+        os << "Point: (";
+
+        bool first = true;
+        for (auto demention:point) {
+            if (first) {
+                first = false;
+            }else {
+                os << ',';
+            }
+            os << demention;
+        }
+        return os << ')';
+
+    }
+
+
+    class ClusterLocalAggregateSum {
+    public:
+        ClusterLocalAggregateSum() = default;
+        ClusterLocalAggregateSum(const ClusterLocalAggregateSum& other) = default;
+        ClusterLocalAggregateSum(ClusterLocalAggregateSum&& other) = default;
+        ClusterLocalAggregateSum& operator=(const ClusterLocalAggregateSum& other) = default;
+        ClusterLocalAggregateSum& operator=(ClusterLocalAggregateSum&& other) = default;
+        ~ClusterLocalAggregateSum() = default;
+
+        ClusterLocalAggregateSum(Point localSumData, size_t localCount) : localSumData(std::move(localSumData)), localCount(localCount){}
+
+        /**
+         * The local sum of the point
+         */
+        Point localSumData{};
+        /**
+         * The local count (number of points that went into making the sum
+         */
+        size_t localCount{};
+
+        template<class Archive>
+        void serialize(Archive &ar, const unsigned int version) {
+            ar &localSumData;
+            ar &localCount;
+        }
+
+        static std::expected<ClusterLocalAggregateSum, std::string> calculateCentroidLocalSum(const std::vector<Point> &points);
+
+    };
+
 } // kmeans
 
 #endif //KMEANS_MPI_POINT_HPP
