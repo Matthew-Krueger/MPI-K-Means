@@ -14,25 +14,29 @@ namespace kmeans{
 
     std::expected<double, std::string> Point::calculateEuclideanDistance(const Point& other){
 
-        // guard against dimension mismatch
+        // Guard against dimension mismatch.
         if (m_Data.size() != other.m_Data.size()){
             return std::unexpected("Dimensions mismatch. This has " + std::to_string(m_Data.size()) + " dimensions, that has " + std::to_string(other.m_Data.size()) + " dimensions.");
         }
 
+        // Lambda function to calculate the squared difference between two doubles.
         auto squaredifference = [](double first, double second) -> double{
             return std::pow(first - second, 2);
         };
 
+        // Calculate the sum of squared differences using std::transform_reduce.
+        // m_Data.begin(), m_Data.end(): The range of elements from the current Point.
+        // other.m_Data.begin(): The starting iterator for the other Point's data.
+        // 0.0: The initial value for the sum.
+        // std::plus<double>(): The binary operation to combine the results of the transform.
+        // [squaredifference](auto first, auto second){ ... }: The transform operation, applying squaredifference to corresponding elements.
         double totalSum = std::transform_reduce(
             m_Data.begin(),
             m_Data.end(),
             other.m_Data.begin(),
             0.0,
             std::plus<double>(),
-            [squaredifference](auto first, auto second){
-                return squaredifference(first,second);
-            }
-
+            [squaredifference](auto first, auto second){ return squaredifference(first,second); }
         );
 
         return std::sqrt(totalSum);
@@ -41,20 +45,23 @@ namespace kmeans{
 
     std::expected<Point::FlattenedPoints, std::string> Point::flattenPoints(const std::vector<Point>& points) {
 
+        // Return an error if no points are provided.
         if (points.empty()) {
             return std::unexpected("No points provided");
         }
 
-        // validate that all points have the same dimensionality
+        // Validate that all points have the same dimensionality.
         const size_t expectedNumberDimensions = points[0].m_Data.size();
+        // Check if all points in the vector have the expected number of dimensions.
         bool allHaveRequiredNumberDimensions = std::all_of(points.begin(), points.end(), [expectedNumberDimensions](const Point& point) {
             return expectedNumberDimensions == point.m_Data.size();
         });
+        // Return an error if not all points have the same number of dimensions.
         if (!allHaveRequiredNumberDimensions) {
             return std::unexpected("All points must have the same number of dimensions");
         }
 
-        // construct a result view
+        // Construct a result view by joining the data of all points.
         const auto resultView = points | std::ranges::views::join;
 
         // now use that view to construct a flattened vector
@@ -69,8 +76,10 @@ namespace kmeans{
     }
 
     std::expected<std::vector<Point>, std::string> Point::unflattenPoints(const Point::FlattenedPoints &flattenedPoints) {
-        // validate the data makes sense at all
+        // Validate that the total number of elements in the flattened vector matches the expected count.
+        // totalEntries: The expected total number of elements (numPoints * numDimensionsPerPoint).
         const size_t totalEntries = flattenedPoints.numDimensionsPerPoint * flattenedPoints.numPoints;
+        // Check if the actual size of the flattened points vector matches the expected total entries.
         if (flattenedPoints.points.size() != totalEntries) {
             return std::unexpected(
                 "Illogical number of points or dimensionality. Expected " +
@@ -78,11 +87,14 @@ namespace kmeans{
                 "Should have " + std::to_string(flattenedPoints.numPoints) + " points and " + std::to_string(flattenedPoints.numDimensionsPerPoint) + " dimensions per point");
         }
 
+        // result: A vector to store the unflattened Point objects.
         std::vector<Point> result;
+        // Reserve memory for the expected number of points to avoid reallocations.
         result.reserve(flattenedPoints.numPoints);
 
-        // go through the points, and unflatten them into result
+        // Iterate through the flattened points data and reconstruct individual Point objects.
         for (size_t currentPointStartingIndex = 0; currentPointStartingIndex < totalEntries; currentPointStartingIndex += flattenedPoints.numDimensionsPerPoint) {
+            // Extract the data for a single point.
             std::vector<double> pointData(flattenedPoints.points.begin() + currentPointStartingIndex, flattenedPoints.points.begin() + currentPointStartingIndex + flattenedPoints.numDimensionsPerPoint);
             result.emplace_back(pointData);
         }
