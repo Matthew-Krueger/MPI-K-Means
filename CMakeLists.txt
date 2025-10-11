@@ -12,13 +12,15 @@ add_compile_options(-O3 -march=native -ftree-vectorize -flto)
 #cmake_policy(SET CMP0144 NEW)
 #cmake_policy(SET CMP0167 OLD)
 set(BOOST_ROOT /boost/boost_1_82_0)
-find_package(Boost 1.82.0 COMPONENTS mpi serialization REQUIRED)
+find_package(Boost 1.82.0 COMPONENTS mpi serialization random REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
 
 add_executable(kmeans_mpi
         src/main.cpp
         src/shared/Point.cpp
-        src/shared/Point.hpp)
+        src/shared/Point.hpp
+        src/shared/DataSet.cpp
+        src/shared/DataSet.hpp)
 
 target_link_libraries(kmeans_mpi PRIVATE MPI::MPI_CXX ${Boost_LIBRARIES})

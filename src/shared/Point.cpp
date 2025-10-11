@@ -56,10 +56,10 @@ namespace kmeans {
         }
 
         // Check if all points in the vector have the expected number of dimensions.
-        bool allHaveRequiredNumberDimensions = std::all_of(points.begin(), points.end(),
-                                                           [expectedNumberDimensions](const Point &point) {
-                                                               return expectedNumberDimensions == point.m_Data.size();
-                                                           });
+        bool allHaveRequiredNumberDimensions = std::ranges::all_of(points,
+                                                                   [expectedNumberDimensions](const Point &point) {
+                                                                       return expectedNumberDimensions == point.m_Data.size();
+                                                                   });
 
         // Return an error if not all points have the same number of dimensions.
         if (!allHaveRequiredNumberDimensions) {
@@ -75,12 +75,12 @@ namespace kmeans {
         return Point::FlattenedPoints{
             expectedNumberDimensions,
             points.size(),
-            flattenedPoints
+            std::move(flattenedPoints)
         };
     }
 
     std::expected<std::vector<Point>, std::string>
-    Point::unflattenPoints(const Point::FlattenedPoints &flattenedPoints) {
+    Point::unflattenPoints(const FlattenedPoints &flattenedPoints) {
         // Validate that the total number of elements in the flattened vector matches the expected count.
         // totalEntries: The expected total number of elements (numPoints * numDimensionsPerPoint).
         const size_t totalEntries = flattenedPoints.numDimensionsPerPoint * flattenedPoints.numPoints;
@@ -131,10 +131,10 @@ namespace kmeans {
         }
 
         // Check if all points in the vector have the expected number of dimensions.
-        bool allHaveRequiredNumberDimensions = std::all_of(points.begin(), points.end(),
-                                                           [expectedNumberDimensions](const Point &point) {
-                                                               return expectedNumberDimensions == point.getData().size();
-                                                           });
+        bool allHaveRequiredNumberDimensions = std::ranges::all_of(points,
+                                                                   [expectedNumberDimensions](const Point &point) {
+                                                                       return expectedNumberDimensions == point.getData().size();
+                                                                   });
 
         // Return an error if not all points have the same number of dimensions.
         if (!allHaveRequiredNumberDimensions) {
@@ -172,7 +172,7 @@ namespace kmeans {
         //     centroidData.begin(),
         //     [numPoints = points.size()](double sum) { return sum / static_cast<double>(numPoints); });
 
-        return ClusterLocalAggregateSum(Point(centroidLocalSum),points.size());
+        return ClusterLocalAggregateSum(Point(std::move(centroidLocalSum)),points.size());
 
     }
 } // kmeans
