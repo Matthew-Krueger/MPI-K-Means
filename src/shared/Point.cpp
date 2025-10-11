@@ -4,16 +4,13 @@
 
 #include "Point.hpp"
 
+#include <algorithm>
 #include <expected>
 #include <numeric>
 #include <cmath>
 #include <ranges>
 
 namespace kmeans{
-
-    Point::~Point(){
-
-    }
 
     std::expected<double, std::string> Point::calculateEuclideanDistance(const Point& other){
 
@@ -42,22 +39,57 @@ namespace kmeans{
 
     }
 
-    std::expected<Point::FlattenedPoints, std::string> Point::flattenPoints(const std::vector<Point>& points){
+    std::expected<Point::FlattenedPoints, std::string> Point::flattenPoints(const std::vector<Point>& points) {
 
-        // get the sum of the lengths of the vectors, while ensuring the dimensionality matches
-        const double expectedNumberDimensions = points[0].m_Data.size();
-        std::expected<size_t, std::string> result = std::transform_reduce(
-            points.begin(),
-            points.end(),
-            0.0,
-            std::plus<size_t>(),
-            [expectedNumberDimensions](const Point& point) -> std::expected<size_t, std::string> {
-                size_t dimensions = point.m_Data.size();
-                if(expectedNumberDimensions != dimensions) return std::unexpected("Dimensions mismatch in a point. Expected dimensionality is " + std::to_string(expectedNumberDimensions) + ", but got " + std::to_string(dimensions));
-                return dimensions;
-            }
-        )
+        if (points.empty()) {
+            return std::unexpected("No points provided");
+        }
 
+        // validate that all points have the same dimensionality
+        const size_t expectedNumberDimensions = points[0].m_Data.size();
+        bool allHaveRequiredNumberDimensions = std::all_of(points.begin(), points.end(), [expectedNumberDimensions](const Point& point) {
+            return expectedNumberDimensions == point.m_Data.size();
+        });
+        if (!allHaveRequiredNumberDimensions) {
+            return std::unexpected("All points must have the same number of dimensions");
+        }
+
+        // construct a result view
+        const auto resultView = points | std::ranges::views::join;
+
+        // now use that view to construct a flattened vector
+        std::vector<double> flattenedPoints(resultView.begin(), resultView.end());
+
+        return Point::FlattenedPoints{
+            expectedNumberDimensions,
+            points.size(),
+            flattenedPoints
+        };
 
     }
+
+    std::expected<std::vector<Point>, std::string> Point::unflattenPoints(const Point::FlattenedPoints &flattenedPoints) {
+        // validate the data makes sense at all
+        const size_t totalEntries = flattenedPoints.numDimensionsPerPoint * flattenedPoints.numPoints;
+        if (flattenedPoints.points.size() != totalEntries) {
+            return std::unexpected(
+                "Illogical number of points or dimensionality. Expected " +
+                std::to_string(totalEntries) + " points, but got " + std::to_string(flattenedPoints.points.size()) + " instead. "
+                "Should have " + std::to_string(flattenedPoints.numPoints) + " points and " + std::to_string(flattenedPoints.numDimensionsPerPoint) + " dimensions per point");
+        }
+
+        std::vector<Point> result;
+        result.reserve(flattenedPoints.numPoints);
+
+        // go through the points, and unflatten them into result
+        for (size_t currentPointStartingIndex = 0; currentPointStartingIndex < totalEntries; currentPointStartingIndex += flattenedPoints.numDimensionsPerPoint) {
+            std::vector<double> pointData(flattenedPoints.points.begin() + currentPointStartingIndex, flattenedPoints.points.begin() + currentPointStartingIndex + flattenedPoints.numDimensionsPerPoint);
+            result.emplace_back(pointData);
+        }
+
+        return result;
+
+    }
+
+
 } // kmeans

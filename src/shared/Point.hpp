@@ -19,6 +19,8 @@ namespace kmeans{
             std::vector<double> points;
         };
 
+        Point() = default;
+
         Point(std::vector<double> data) noexcept: m_Data(std::move(data)){}
 
         Point(const Point& other) : m_Data{other.m_Data}{}
@@ -31,7 +33,7 @@ namespace kmeans{
             return *this;
         }
 
-        ~Point();
+        ~Point() = default;
 
         const std::vector<double>& getData() { return m_Data; };
         void setData(std::vector<double> data) { m_Data = std::move(data); };
@@ -39,6 +41,17 @@ namespace kmeans{
         std::expected<double, std::string> calculateEuclideanDistance(const Point& other);
 
         static std::expected<FlattenedPoints, std::string> flattenPoints(const std::vector<Point>& points);
+        static std::expected<std::vector<Point>, std::string> unflattenPoints(const FlattenedPoints &flattenedPoints);
+
+
+        // Iterator support to allow for range-based for loops over the data, among other syntax magic
+        using iterator = std::vector<double>::iterator;
+        using const_iterator = std::vector<double>::const_iterator;
+
+        inline iterator begin() { return m_Data.begin(); }
+        inline const_iterator begin() const { return m_Data.begin(); }
+        inline iterator end() { return m_Data.end(); }
+        inline const_iterator end() const { return m_Data.end(); }
 
     private:
         std::vector<double> m_Data;
