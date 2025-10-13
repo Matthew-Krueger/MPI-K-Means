@@ -11,7 +11,7 @@
 #include <ranges>
 
 namespace kmeans {
-    std::expected<double, std::string> Point::calculateEuclideanDistance(const Point &other) {
+    std::expected<double, std::string> Point::calculateEuclideanDistance(const Point &other) const {
         // Guard against dimension mismatch.
         if (m_Data.size() != other.m_Data.size()) {
             return std::unexpected(
@@ -196,4 +196,48 @@ namespace kmeans {
         return *this;
 
     }
+
+    std::vector<Point>::const_iterator Point::findClosestPointInVector(const std::vector<Point>& other) const {
+
+        if (other.empty()) {
+            return other.end();
+        }
+
+        std::vector<std::pair<std::expected<double, std::string>, size_t>> distancePairs;
+        distancePairs.reserve(other.size());
+        std::ranges::transform(
+            std::ranges::views::zip(other, std::ranges::iota_view{static_cast<size_t>(0), other.size()}), // zip up a range of 0 to other.size, and other itself.
+            std::back_inserter(distancePairs),
+            [this](const auto& pointIndexPair) {
+                // make a new pair, this time with the euclidian distance and index instead.
+                return std::make_pair(
+                    calculateEuclideanDistance(std::get<0>(pointIndexPair)),
+                    std::get<1>(pointIndexPair)
+                );
+            }
+        );
+
+        // Find the minimum valid distance
+        auto minIter = std::ranges::min_element(
+            distancePairs,
+
+            // standard comparison algorithm. If a<b return true.
+            [](const auto& a, const auto& b) {
+                if (!a.first.has_value()) return false; // Invalid distances are greater
+                if (!b.first.has_value()) return true;
+                return *a.first < *b.first; // safe to dereference since we use .has_value
+            }
+        );
+
+        // If no valid distances, return end iterator
+        if (minIter == distancePairs.end() || !minIter->first.has_value()) {
+            return other.end();
+        }
+
+        // Return iterator to the point with minimum distance
+        return other.begin() + static_cast<std::vector<Point>::difference_type>(minIter->second);
+
+    }
+
+    
 } // kmeans

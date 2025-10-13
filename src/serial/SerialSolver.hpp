@@ -10,8 +10,37 @@
 namespace kmeans {
     class SerialSolver {
     public:
-        SerialSolver(DataSet &&dataSet);
+        struct Config {
+            size_t maxIterations;
+            double convergenceThreshold;
+            DataSet &&dataSet;
+            size_t startingCentroidSeed;
+            size_t startingCentroidCount;
+        };
+
+        struct PerCountCentroid {
+            size_t count;
+            Point centroid;
+        };
+
+        SerialSolver(Config &config);
         ~SerialSolver() = default;
+
+        void run();
+
+        inline DataSet& getDataSet() { return m_DataSet; }
+        inline const DataSet& getDataSet() const { return m_DataSet; }
+        inline const std::optional<std::vector<Point>>& getCalculatedCentroidsAtCompletion() const { return m_CalculatedCentroidsAtCompletion; }
+
+    private:
+        DataSet m_DataSet;
+        std::vector<PerCountCentroid> m_CurrentCentroids;
+        std::vector<PerCountCentroid> m_PreviousCentroids;
+        size_t m_MaxIterations;
+        double m_ConvergenceThreshold;
+        std::optional<std::vector<Point>> m_CalculatedCentroidsAtCompletion = std::nullopt;
+
+
     };
 } // kmeans
 

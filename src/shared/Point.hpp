@@ -120,7 +120,7 @@ namespace kmeans{
          * @param other The other point to calculate the distance to.
          * @return An expected value containing the Euclidean distance as a double, or a string error message if dimensions do not match.
          */
-        std::expected<double, std::string> calculateEuclideanDistance(const Point& other);
+        std::expected<double, std::string> calculateEuclideanDistance(const Point& other) const;
 
         static std::expected<FlattenedPoints, std::string> flattenPoints(const std::vector<Point>& points);
         static std::expected<std::vector<Point>, std::string> unflattenPoints(const FlattenedPoints &flattenedPoints);
@@ -149,6 +149,8 @@ namespace kmeans{
         inline iterator end() { return m_Data.end(); }
         [[nodiscard]] inline const_iterator end() const { return m_Data.end(); }
 
+
+        [[nodiscard]] std::vector<Point>::const_iterator findClosestPointInVector(const std::vector<Point>& other) const;
 
         friend class boost::serialization::access;
         template<class Archive>
