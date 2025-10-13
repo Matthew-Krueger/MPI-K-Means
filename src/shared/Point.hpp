@@ -83,6 +83,39 @@ namespace kmeans{
         void setData(std::vector<double> data) { m_Data = std::move(data); };
 
         /**
+         * @brief Gets the number of dimensions in the point.
+         * @return The number of dimensions in the point.
+         */
+        [[nodiscard]] inline size_t numDimensions() const { return m_Data.size(); }
+
+        /**
+         * @brief Gets the value of a specific dimension in the point.
+         * @param index The index of the dimension to get.
+         * @return The value of the dimension at the specified index.
+         */
+        [[nodiscard]] inline double operator[](const size_t index) const { return m_Data[index]; }
+
+        /**
+         * @brief Gets the number of elements in the data vector representing the point.
+         *
+         * This method returns the total number of values stored in the internal data vector,
+         * which corresponds to the number of dimensions of the point.
+         *
+         * @return The size of the data vector as a size_t.
+         */
+        inline size_t size() const { return m_Data.size(); }
+
+        /**
+         * @brief Checks if the point's data vector is empty.
+         *
+         * This method determines whether the internal data vector of the point contains
+         * any elements, effectively checking if the point has any dimensions defined.
+         *
+         * @return True if the data vector is empty, otherwise false.
+         */
+        inline bool empty() const { return m_Data.empty(); }
+
+        /**
          * @brief Calculates the Euclidean distance between this point and another point.
          * @param other The other point to calculate the distance to.
          * @return An expected value containing the Euclidean distance as a double, or a string error message if dimensions do not match.
