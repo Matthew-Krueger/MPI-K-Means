@@ -146,33 +146,54 @@ namespace kmeans {
         // Initialize a vector to store the sum of each dimension
 
 
-        // Sum coordinates element-wise using accumulate
-        // this approach uses a range based for loop and std::ranges::transform to transform each vector into the accumulator
-        // so effectively, we calculate a vector sum by accumulating every point into the vector,
-        // such that if we have v1, v2 and v3, each with [a,b,c]
-        // we get [v1.a + v2.a + v3.a, v1.b + v2.b + v3.b, ...]
-        // we cannot use std::accumulate as it follows strict semantics per the documentation which may not be optimized away
+        // Sum all elements of each point into one point in a fold left reduction
+        // Since fold left uses move semantics
+        auto result2 = std::ranges::fold_left(
+            points,
+            Point(std::vector<double>(expectedNumberDimensions, 0.0)),
+            [](Point acc, const Point &p) {
+                acc += p;
+                return acc;
+            }
+        );
 
-        std::vector<double> centroidLocalSum(expectedNumberDimensions, 0.0);
-        for (const auto &point:points) {
-            std::ranges::transform(
-                centroidLocalSum,
-                point.getData(),
-                centroidLocalSum.begin(),
-                std::plus<>()
-            );
+        // then on each process we can use use operator/ to divide by a scalar.
+
+        return ClusterLocalAggregateSum(std::move(result2),points.size());
+
+    }
+
+    Point& Point::operator+=(const Point &other) {
+
+        // guard against invalid points being added together
+        #ifndef NDEBUG
+        if (m_Data.size() != other.getData().size() || m_Data.empty()) {
+            throw std::invalid_argument("Dimension Mismatch or Invalid dimensions.");
         }
+        #endif
 
+        // copy current point, and add each element to it.
+        std::ranges::transform(
+            m_Data,
+            other,
+            m_Data.begin(),
+            std::plus<>()
+        );
 
-        // Leaving this to remind me how to do the average
-        // We don't need to do this right now because MPI will handle it or we will externally. This is just for reference.
-        // // Divide by the number of points to get the mean
-        // std::ranges::transform(
-        //     centroidData,
-        //     centroidData.begin(),
-        //     [numPoints = points.size()](double sum) { return sum / static_cast<double>(numPoints); });
+        return *this;
 
-        return ClusterLocalAggregateSum(Point(std::move(centroidLocalSum)),points.size());
+    }
+
+    Point& Point::operator/=(const double scalar) {
+
+        // no need to check for compatability in a scalar division
+        std::ranges::transform(
+            m_Data,
+            m_Data.begin(),
+            [scalar](const double dimension){ return dimension/scalar ; }
+        );
+
+        return *this;
 
     }
 } // kmeans

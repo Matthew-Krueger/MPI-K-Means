@@ -92,6 +92,20 @@ namespace kmeans{
         static std::expected<FlattenedPoints, std::string> flattenPoints(const std::vector<Point>& points);
         static std::expected<std::vector<Point>, std::string> unflattenPoints(const FlattenedPoints &flattenedPoints);
 
+        Point& operator+=(const Point& other);
+        Point& operator/=(double scalar);
+
+        Point operator+(const Point& other) const {
+            Point result = *this;
+            result += other;
+            return result;
+        }
+
+        Point operator/(const double scalar) const {
+            Point result = *this;
+            result /= scalar;
+            return result;
+        }
 
         // Iterator support to allow for range-based for loops over the data, among other syntax magic
         using iterator = std::vector<double>::iterator;
