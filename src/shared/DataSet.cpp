@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <ranges>
 #include <boost/random/normal_distribution.hpp>
+#include <memory>
 
 namespace kmeans {
 
@@ -14,19 +15,20 @@ namespace kmeans {
     // It's more FUN!
     // Uncle Iroh in The Ember Island Players (probably)
     auto DataSet::generateCluster(const Point &clusterCenter, size_t numberPoints, double clusterSpread,
-                                  std::mt19937 &rng) {
+                                  std::shared_ptr<std::mt19937> rng) {
 
         std::vector<Point> cluster;
         cluster.reserve(numberPoints);
 
+        // reserve the vector
         size_t clusterNumberDimensions = clusterCenter.getData().size();
-        std::vector<boost::normal_distribution<double>> distributions;
-        distributions.reserve(clusterNumberDimensions);
+        auto distributions = std::make_shared<std::vector<boost::normal_distribution<double>>>();
+        distributions->reserve(clusterNumberDimensions);
 
         // use std::ranges::transform to populate distributions with gauntness distributions *BASED ON* the cluster center
         // back inserter is used to make sure the distributions iterator stays valid
         std::ranges::transform(clusterCenter,
-                               std::back_inserter(distributions),
+                               std::back_inserter(*distributions),
                                [clusterSpread](double dimension) {
                                    return boost::normal_distribution<double>(dimension, clusterSpread);
                                }
@@ -34,7 +36,7 @@ namespace kmeans {
 
         // we will now generate points with each index in the vector using its own corresponding boost distribution.
         auto generatedPointsView = std::ranges::views::iota((size_t)0, numberPoints)
-                           | std::ranges::views::transform([distributions, &rng](int) mutable { return generateSinglePoint(distributions, rng); });
+                           | std::ranges::views::transform([distributions, rng](int) { return generateSinglePoint(distributions, rng); });
 
         return generatedPointsView;
 
@@ -42,11 +44,20 @@ namespace kmeans {
 
     DataSet::DataSet(const Config& config) {
 
+        // First, we should make sure the config parameter is valid
+        if (config.numTrueClusters>config.numTotalSamples) {
+            throw std::invalid_argument("Number of clusters cannot be greater than number of total samples");
+        }
+
+        if (config.clusterDimensionDistributions.size()!=config.numDimensions) {
+            throw std::invalid_argument("Dimension Distributions does not contain expected number of dimensions");
+        }
+
         // reserve the right number of samples
         m_Points.reserve(config.numTotalSamples);
 
         // create our random
-        std::mt19937 rng(config.seed);
+        auto rng = std::make_shared<std::mt19937>(config.seed);
 
         // scope the generation of our known good centroids
         // so we can dump the distribution generators ASAP
@@ -58,7 +69,7 @@ namespace kmeans {
             distributions.reserve(config.numDimensions);
 
             // and actually create them
-            auto clusterCentroidGeneratorDistributionView = std::ranges::views::iota((size_t)0, config.numDimensions - 1)
+            auto clusterCentroidGeneratorDistributionView = std::ranges::views::iota(static_cast<size_t>(0), config.numDimensions)
                 | std::ranges::views::transform([&config](size_t dimension) {
                     return std::uniform_real_distribution<double>(config.clusterDimensionDistributions[dimension].low, config.clusterDimensionDistributions[dimension].high);
                 });
@@ -78,7 +89,7 @@ namespace kmeans {
                 std::vector<double> coordinates;
                 coordinates.reserve(config.numDimensions);
                 for (auto& dist : clusterCentroidGeneratorDistribution) {
-                    coordinates.push_back(dist(rng));
+                    coordinates.push_back(dist(*rng));
                 }
                 m_KnownGoodCentroids.value().emplace_back(coordinates);
             }
@@ -90,7 +101,7 @@ namespace kmeans {
         size_t samplesPerCentroid = config.numTotalSamples / config.numTrueClusters;
         size_t samplesLeftover = config.numTotalSamples % config.numTrueClusters;
         // Create a view for the number of samples per cluster, accounting for leftovers.
-        auto samplesPerClusterView = std::ranges::views::iota(size_t{0}, config.numTrueClusters)
+        auto samplesPerClusterView = std::ranges::views::iota(static_cast<size_t>(0), config.numTrueClusters)
             | std::ranges::views::transform([samplesPerCentroid, samplesLeftover](size_t clusterIdx) {
                 // Distribute leftovers to the first few clusters.
                 return samplesPerCentroid + (clusterIdx < samplesLeftover ? 1 : 0);
@@ -98,13 +109,15 @@ namespace kmeans {
 
         // Now that we know how many per centroid, we can call DataSet::generateCluster for each centroid, with the number of samples, the RNG, the cluster center as the centroid.
         // Generate clusters using a ranges pipeline.
-        auto clustersView = std::ranges::views::iota(static_cast<size_t>(0), config.numTrueClusters)
-            | std::ranges::views::transform([this, &rng, samplesPerClusterView, config](const size_t clusterIdx) {
-                // Access the number of samples for the current cluster.
-                const size_t numSamples = *(samplesPerClusterView.begin() + static_cast<long>(clusterIdx));
-                // Generate a cluster around the known centroid.
+
+        auto knownGoodCentroidsWithCountsView = std::ranges::views::zip(m_KnownGoodCentroids.value(), samplesPerClusterView);
+
+        auto clustersView = knownGoodCentroidsWithCountsView
+            | std::ranges::views::transform([this, rng, &config](const auto& tuple) {
+                const auto& centroid = std::get<0>(tuple); // get the centroid
+                const size_t numSamples = std::get<1>(tuple); // and the number of samples
                 return generateCluster(
-                    m_KnownGoodCentroids->at(clusterIdx),
+                    centroid,
                     numSamples,
                     config.clusterSpread,
                     rng
@@ -113,18 +126,19 @@ namespace kmeans {
             | std::ranges::views::join; // Flatten the clusters into a single range of points.
 
         // Collect the generated points into m_Points
+        m_Points.reserve(config.numTotalSamples);
         std::ranges::move(clustersView, std::back_inserter(m_Points));
     }
 
-    Point DataSet::generateSinglePoint(std::vector<boost::normal_distribution<double>>& distributions, std::mt19937 &rng) {
+    Point DataSet::generateSinglePoint(const std::shared_ptr<std::vector<boost::normal_distribution<double>>>& distributions, std::shared_ptr<std::mt19937> rng) {
 
         // back inserter doesn't play nice so we will make a vector then move it to the
         std::vector<double> dimensionsForPoint;
-        dimensionsForPoint.reserve(distributions.size()); // Pre-reserve for dimensions.
+        dimensionsForPoint.reserve(distributions->size()); // Pre-reserve for dimensions.
 
-        std::ranges::transform(distributions,
+        std::ranges::transform(*distributions,
                                std::back_inserter(dimensionsForPoint),
-                               [&](auto& dist){ return dist(rng); }); // Sample each dimension
+                               [&](auto& dist){ return dist(*rng); }); // Sample each dimension
 
         return Point(std::move(dimensionsForPoint)); // Assuming Point can be constructed from std::vector<double>.
         // If Point *is* std::vector<double>, just 'return dimensionsForPoint;'

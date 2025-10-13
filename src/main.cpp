@@ -1,23 +1,32 @@
 
 #include <boost/mpi.hpp>
 
+#include "shared/DataSet.hpp"
+#include "shared/Logging.hpp"
 #include "shared/Point.hpp"
 
 int main(int argc, char** argv)
 {
 
+    DEBUG_PRINT("Creating MPI Environment");
     boost::mpi::environment mpiEnvironment(argc, argv);
     boost::mpi::communicator worldCommunicator;
 
-    kmeans::Point point({3});
-    kmeans::Point point2({4});
+    kmeans::DataSet::Config datasetConfig{
+        {{0,1}, {1,2}, {2,3}},
+        50000,
+        3,
+        3000,
+        0.01,
+        1
+    };
 
-    std::cout << point << std::endl;
-    std::cout << point2 << std::endl;
 
-    std::cout << kmeans::ClusterLocalAggregateSum::calculateCentroidLocalSum({point,point2}).value().localSumData << std::endl;
+    kmeans::DataSet dataSet(datasetConfig);
 
-    std::cout << point.calculateEuclideanDistance(point2).value() << std::endl;
+    for (auto& point:dataSet) {
+        std::cout << point << std::endl;
+    }
 
     std::cout << "I am rank " << worldCommunicator.rank() << " of a world size " << worldCommunicator.size() << std::endl;
 

@@ -23,6 +23,14 @@ namespace kmeans {
          * suitable for clustering algorithms. It includes details about the distribution
          * of dimensions, total samples, number of dimensions, number of true clusters,
          * cluster spread, and random seed.
+         *
+         * Contains:
+         * clusterDimensionDistributions - vector of low and high values
+         * numTotalSamples
+         * numDimensions
+         * numTrueClusters
+         * clusterSpread
+         * seed
          */
     public:
         struct Config {
@@ -107,7 +115,7 @@ namespace kmeans {
         inline void emplace_back(const Point &toEmplace) { m_Points.emplace_back(toEmplace); }
 
         static auto generateCluster(const Point &clusterCenter, size_t numberPoints, double clusterSpread,
-                                    std::mt19937 &rng);
+                                    std::shared_ptr<std::mt19937> rng);
 
         std::vector<Point> m_Points;
 
@@ -115,7 +123,7 @@ namespace kmeans {
         // even use it at all. It's just here since we'll already have it.
         std::optional<std::vector<Point>> m_KnownGoodCentroids = std::nullopt;
 
-        static Point generateSinglePoint(std::vector<boost::normal_distribution<double>>& distributions, std::mt19937 &rng);
+        static Point generateSinglePoint(const std::shared_ptr<std::vector<boost::normal_distribution<double>>>& distributions, std::shared_ptr<std::mt19937> rng);
 
 
     };
