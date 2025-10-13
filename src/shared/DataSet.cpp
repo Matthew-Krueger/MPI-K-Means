@@ -113,7 +113,7 @@ namespace kmeans {
         auto knownGoodCentroidsWithCountsView = std::ranges::views::zip(m_KnownGoodCentroids.value(), samplesPerClusterView);
 
         auto clustersView = knownGoodCentroidsWithCountsView
-            | std::ranges::views::transform([this, rng, &config](const auto& tuple) {
+            | std::ranges::views::transform([rng, &config](const auto& tuple) {
                 const auto& centroid = std::get<0>(tuple); // get the centroid
                 const size_t numSamples = std::get<1>(tuple); // and the number of samples
                 return generateCluster(

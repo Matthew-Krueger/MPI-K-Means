@@ -21,6 +21,10 @@ add_executable(kmeans_mpi
         src/shared/Point.cpp
         src/shared/Point.hpp
         src/shared/DataSet.cpp
-        src/shared/DataSet.hpp)
+        src/shared/DataSet.hpp
+        src/serial/SerialSolver.cpp
+        src/serial/SerialSolver.hpp
+        src/shared/Utils.cpp
+        src/shared/Utils.hpp)
 
 target_link_libraries(kmeans_mpi PRIVATE MPI::MPI_CXX ${Boost_LIBRARIES})
