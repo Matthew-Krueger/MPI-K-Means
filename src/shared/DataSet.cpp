@@ -64,7 +64,10 @@ namespace kmeans {
                 });
 
             // and expand their pipeline
-            auto clusterCentroidGeneratorDistribution = std::vector<std::uniform_real_distribution<double>>(clusterCentroidGeneratorDistributionView.begin(), clusterCentroidGeneratorDistributionView.end());
+            //auto clusterCentroidGeneratorDistribution = std::vector<std::uniform_real_distribution<double>>(clusterCentroidGeneratorDistributionView.begin(), clusterCentroidGeneratorDistributionView.end());
+            std::vector<std::uniform_real_distribution<double>> clusterCentroidGeneratorDistribution;
+            clusterCentroidGeneratorDistribution.reserve(config.numDimensions);
+            std::ranges::move(clusterCentroidGeneratorDistributionView, std::back_inserter(clusterCentroidGeneratorDistribution));
 
             // now, we can create our *actual* centroids with them
             // We are not using pipelining for this one since the generation is inherently stateful and thus problematic
