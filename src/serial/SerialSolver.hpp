@@ -13,17 +13,17 @@ namespace kmeans {
         struct Config {
             size_t maxIterations;
             double convergenceThreshold;
-            DataSet &&dataSet;
+            DataSet dataSet;
             size_t startingCentroidSeed;
             size_t startingCentroidCount;
         };
 
-        struct PerCountCentroid {
-            size_t count;
-            Point centroid;
-        };
-
+        SerialSolver() = default;
         SerialSolver(Config &config);
+        SerialSolver(const SerialSolver&) = delete;
+        SerialSolver(Config &&config) = delete;
+        SerialSolver& operator=(const SerialSolver&) = delete;
+        SerialSolver& operator=(SerialSolver&&) = delete;
         ~SerialSolver() = default;
 
         void run();
@@ -34,8 +34,8 @@ namespace kmeans {
 
     private:
         DataSet m_DataSet;
-        std::vector<PerCountCentroid> m_CurrentCentroids;
-        std::vector<PerCountCentroid> m_PreviousCentroids;
+        std::vector<Point> m_CurrentCentroids;
+        std::vector<Point> m_PreviousCentroids;
         size_t m_MaxIterations;
         double m_ConvergenceThreshold;
         std::optional<std::vector<Point>> m_CalculatedCentroidsAtCompletion = std::nullopt;

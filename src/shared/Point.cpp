@@ -197,7 +197,7 @@ namespace kmeans {
 
     }
 
-    std::vector<Point>::const_iterator Point::findClosestPointInVector(const std::vector<Point>& other) const {
+    std::vector<Point>::iterator Point::findClosestPointInVector(std::vector<Point>& other) const {
 
         if (other.empty()) {
             return other.end();

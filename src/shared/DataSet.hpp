@@ -98,6 +98,7 @@ namespace kmeans {
         inline size_t size() const { return m_Points.size(); }
         inline bool empty() const { return m_Points.empty(); }
         inline const Point& operator[](const size_t index) const { return m_Points[index]; }
+        inline std::optional<std::vector<Point>>& getKnownGoodCentroids() { return m_KnownGoodCentroids; }
 
         inline std::expected<Point::FlattenedPoints, std::string> flattenDataset() { return Point::flattenPoints(m_Points); };
         inline static std::expected<DataSet, std::string> unflattenDataset(const Point::FlattenedPoints &flattenedPoints) {

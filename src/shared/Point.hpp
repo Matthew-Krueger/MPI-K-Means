@@ -34,7 +34,7 @@ namespace kmeans{
 
         Point() = default;
 
-        explicit Point(std::vector<double> data) noexcept: m_Data(std::move(data)){}
+        explicit Point(std::vector<double> data, size_t count = 1) noexcept: m_Data(std::move(data)), m_Count(count) {}
 
         /**
          * @brief Copy constructor.
@@ -46,7 +46,7 @@ namespace kmeans{
          * @brief Move constructor.
          * @param other The Point object to move from.
          */
-        Point(Point&& other) noexcept : m_Data{std::move(other.m_Data)}{}
+        Point(Point&& other) noexcept : m_Data{std::move(other.m_Data)}, m_Count(other.m_Count){}
 
         /**
          * @brief Copy-and-swap assignment operator.
@@ -150,7 +150,10 @@ namespace kmeans{
         [[nodiscard]] inline const_iterator end() const { return m_Data.end(); }
 
 
-        [[nodiscard]] std::vector<Point>::const_iterator findClosestPointInVector(const std::vector<Point>& other) const;
+        [[nodiscard]] std::vector<Point>::iterator findClosestPointInVector(std::vector<Point>& other) const;
+
+        inline size_t getCount() const { return m_Count; }
+        inline void setCount(size_t count) { m_Count = count; }
 
         friend class boost::serialization::access;
         template<class Archive>
@@ -160,6 +163,7 @@ namespace kmeans{
 
     private:
         std::vector<double> m_Data;
+        size_t m_Count = 1;
     };
 
     inline std::ostream& operator<<(std::ostream& os, const Point& point) {
