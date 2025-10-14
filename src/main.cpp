@@ -20,8 +20,8 @@ int main(int argc, char** argv)
         {{0,10}, {10,20}, {20,30}},
         50000000,
         3,
-        3,
-        1,
+        35,
+        3.5,
         1
     };
 
@@ -41,7 +41,7 @@ int main(int argc, char** argv)
             0.0001,
             std::move(dataSet),
             1234,
-            3
+            35
         );
 
     DEBUG_PRINT("Created Solver Config");

@@ -9,9 +9,11 @@
 #include <ranges>
 #include <vector>
 #include <optional>
+#include "Point.hpp"
 
 namespace kmeans {
 
+    /* we actually want to compare by euclidian distance not direct element comparison, so I'm just removing this I did not realize this unfortunately
     inline bool areVectorsPracticallyTheSame(const std::vector<double>& lhs, const std::vector<double>& rhs, std::optional<double> epsilon = std::nullopt) {
 
         // guard against unequal vectors
@@ -34,9 +36,26 @@ namespace kmeans {
             vectorView.end(),
             [epsilon](auto && pairElements) {
                 // subtract the absolute values of each element, and they are "equal" if they are smaller than epsilon
-                return (std::fabs(std::get<0>(pairElements)) - std::fabs(std::get<1>(pairElements))) < epsilon;
+                return (std::fabs(std::get<0>(pairElements)) - std::fabs(std::get<1>(pairElements))) < *epsilon;
             }
         );
+
+    } */
+
+    inline bool areCentroidsConverged(const std::vector<Point>& lhs, const std::vector<Point>& rhs, std::optional<double> epsilon = std::nullopt) {
+
+        auto centroidCombinedView = std::ranges::views::zip(lhs, rhs);
+        return std::ranges::all_of(
+            centroidCombinedView.begin(),
+            centroidCombinedView.end(),
+            [epsilon](auto && pair) {
+                auto result = std::get<0>(pair).calculateEuclideanDistance(std::get<1>(pair));
+                if (!result.has_value()) {
+                    return false;
+                }else {
+                    return std::fabs(*result) < *epsilon;
+                }
+            });
 
     }
 

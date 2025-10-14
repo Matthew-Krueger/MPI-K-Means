@@ -10,6 +10,8 @@
 
 #include "../shared/Logging.hpp"
 
+#include "../shared/Utils.hpp"
+
 namespace kmeans {
 
     SerialSolver::SerialSolver(Config &config) {
@@ -120,6 +122,11 @@ namespace kmeans {
                 // If getCount() is 0, the centroid sum is already {0,0,...}, which is correct for an empty cluster.
             });
 
+            // now we can check if the centroids have stabilized. If they have, we'll break
+            if (areCentroidsConverged(m_PreviousCentroids, m_CurrentCentroids, m_ConvergenceThreshold)) {
+                break;
+            }
+
             // now we're done with an iteration.
             std::cout << "Iteration " << iteration << std::endl;
             for (auto &centroid : m_CurrentCentroids) {
@@ -128,6 +135,8 @@ namespace kmeans {
 
             iteration++;
         }
+
+        DEBUG_PRINT("Centroids are converged, or terminated due to too many iterations");
 
     }
 
