@@ -5,6 +5,7 @@
 #include "shared/DataSet.hpp"
 #include "shared/Logging.hpp"
 #include "shared/Point.hpp"
+#include "shared/Instrumentation.hpp"
 
 int main(int argc, char** argv)
 {
@@ -13,6 +14,30 @@ int main(int argc, char** argv)
     boost::mpi::environment mpiEnvironment(argc, argv);
     boost::mpi::communicator worldCommunicator;
 
+    auto writer = new instrumentation::MPIWriter(instrumentation::MPIWriter::Config{
+        "log.json",
+        0,
+        5020,
+        0
+    });
+
+    PROFILE_BEGIN_SESSION(std::unique_ptr<instrumentation::MPIWriter>(writer));
+
+    {
+        PROFILE_SCOPE("profile me");
+    }
+
+    {
+        PROFILE_SCOPE("profile me too");
+    }
+
+    {
+        PROFILE_SCOPE("profile me three");
+    }
+
+    PROFILE_END_SESSION();
+
+    /*
     DEBUG_PRINT("Finished creating MPI Environment");
     DEBUG_PRINT("Creating Dataset ");
 
@@ -50,5 +75,6 @@ int main(int argc, char** argv)
     solver.run();
 
     std::cout << "I am rank " << worldCommunicator.rank() << " of a world size " << worldCommunicator.size() << std::endl;
+    */
 
 }
