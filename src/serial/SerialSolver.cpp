@@ -5,11 +5,8 @@
 #include "SerialSolver.hpp"
 
 #include <algorithm>
-#include <memory>
 #include <ranges>
 #include <unordered_set>
-#include <__ranges/iota_view.h>
-#include <__ranges/transform_view.h>
 
 #include "../shared/Logging.hpp"
 
@@ -116,7 +113,6 @@ namespace kmeans {
 
             // transform the m_CurrentCentroids by the scalar
             // so that we have the actual average
-            // THERE's a SEGFAULT here
             std::ranges::for_each(m_CurrentCentroids, [](Point& centroid) {
                 if (centroid.getCount() > 0) {
                     centroid /= static_cast<double>(centroid.getCount());
