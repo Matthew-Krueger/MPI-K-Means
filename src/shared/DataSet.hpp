@@ -12,6 +12,7 @@
 #include <boost/random/normal_distribution.hpp>
 
 
+#include "Instrumentation.hpp"
 #include "Point.hpp"
 
 namespace kmeans {
@@ -102,7 +103,11 @@ namespace kmeans {
 
         inline std::expected<Point::FlattenedPoints, std::string> flattenDataset() { return Point::flattenPoints(m_Points); };
         inline static std::expected<DataSet, std::string> unflattenDataset(const Point::FlattenedPoints &flattenedPoints) {
+
+            PROFILE_FUNCTION();
+
             return Point::unflattenPoints(flattenedPoints).transform([](std::vector<Point>&& points) {
+                PROFILE_FUNCTION();
                 return DataSet(std::move(points));
             });
         };

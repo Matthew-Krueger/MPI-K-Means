@@ -8,7 +8,7 @@
 #include <fstream>
 #include <boost/tuple/detail/tuple_basic.hpp>
 
-#define DEBUG_INSTRUMENTATION
+//#define DEBUG_INSTRUMENTATION
 
 
 #ifdef DEBUG_INSTRUMENTATION

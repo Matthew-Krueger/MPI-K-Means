@@ -9,6 +9,8 @@
 #include <boost/random/normal_distribution.hpp>
 #include <memory>
 
+#include "Instrumentation.hpp"
+
 namespace kmeans {
 
     // Choose treachery and evil auto return,
@@ -16,7 +18,7 @@ namespace kmeans {
     // Uncle Iroh in The Ember Island Players (probably)
     auto DataSet::generateCluster(const Point &clusterCenter, size_t numberPoints, double clusterSpread,
                                   std::shared_ptr<std::mt19937> rng) {
-
+        PROFILE_FUNCTION();
         std::vector<Point> cluster;
         cluster.reserve(numberPoints);
 
@@ -30,6 +32,7 @@ namespace kmeans {
         std::ranges::transform(clusterCenter,
                                std::back_inserter(*distributions),
                                [clusterSpread](double dimension) {
+                                   PROFILE_FUNCTION();
                                    return boost::normal_distribution<double>(dimension, clusterSpread);
                                }
         );
@@ -43,6 +46,7 @@ namespace kmeans {
     }
 
     DataSet::DataSet(const Config& config) {
+        PROFILE_FUNCTION();
 
         // First, we should make sure the config parameter is valid
         if (config.numTrueClusters>config.numTotalSamples) {
@@ -62,6 +66,7 @@ namespace kmeans {
         // scope the generation of our known good centroids
         // so we can dump the distribution generators ASAP
         {
+            PROFILE_SCOPE("Create distributions of the clusters themselves");
             // create our distributions (we are using linear distributions for now
             // This is on a PER DIMENSION BASIS.
             // ESSENTIALLY, WE NEED TO HAVE A VECTOR OF DISTRIBUTIONS SO THAT WE CAN THEN MAKE A VECTOR OF POINTS, RANDOMIZED WITH PER DIMENSION RANDOM NUMBERS
@@ -71,6 +76,7 @@ namespace kmeans {
             // and actually create them
             auto clusterCentroidGeneratorDistributionView = std::ranges::views::iota(static_cast<size_t>(0), config.numDimensions)
                 | std::ranges::views::transform([&config](size_t dimension) {
+                    PROFILE_FUNCTION();
                     return std::uniform_real_distribution<double>(config.clusterDimensionDistributions[dimension].low, config.clusterDimensionDistributions[dimension].high);
                 });
 
@@ -103,6 +109,7 @@ namespace kmeans {
         // Create a view for the number of samples per cluster, accounting for leftovers.
         auto samplesPerClusterView = std::ranges::views::iota(static_cast<size_t>(0), config.numTrueClusters)
             | std::ranges::views::transform([samplesPerCentroid, samplesLeftover](size_t clusterIdx) {
+                PROFILE_FUNCTION();
                 // Distribute leftovers to the first few clusters.
                 return samplesPerCentroid + (clusterIdx < samplesLeftover ? 1 : 0);
             });
@@ -114,6 +121,8 @@ namespace kmeans {
 
         auto clustersView = knownGoodCentroidsWithCountsView
             | std::ranges::views::transform([rng, &config](const auto& tuple) {
+                PROFILE_FUNCTION();
+
                 const auto& centroid = std::get<0>(tuple); // get the centroid
                 const size_t numSamples = std::get<1>(tuple); // and the number of samples
                 return generateCluster(
@@ -126,11 +135,15 @@ namespace kmeans {
             | std::ranges::views::join; // Flatten the clusters into a single range of points.
 
         // Collect the generated points into m_Points
-        m_Points.reserve(config.numTotalSamples);
-        std::ranges::move(clustersView, std::back_inserter(m_Points));
+        {
+            PROFILE_SCOPE("Collect generated points into m_Points");
+            m_Points.reserve(config.numTotalSamples);
+            std::ranges::move(clustersView, std::back_inserter(m_Points));
+        }
     }
 
     Point DataSet::generateSinglePoint(const std::shared_ptr<std::vector<boost::normal_distribution<double>>>& distributions, std::shared_ptr<std::mt19937> rng) {
+        PROFILE_FUNCTION();
 
         // back inserter doesn't play nice so we will make a vector then move it to the
         std::vector<double> dimensionsForPoint;

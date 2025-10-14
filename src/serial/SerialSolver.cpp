@@ -15,7 +15,7 @@
 namespace kmeans {
 
     SerialSolver::SerialSolver(Config &config) {
-
+    PROFILE_FUNCTION();
         m_DataSet = config.dataSet;
 
         DEBUG_PRINT("Starting Centroid Count: " << config.startingCentroidCount);
@@ -65,6 +65,7 @@ namespace kmeans {
 
 
     void SerialSolver::run() {
+        PROFILE_FUNCTION();
 
         // so the algorithm is roughly this
         // Calculate the *closest* centroid and class the point as this centroid
@@ -79,6 +80,7 @@ namespace kmeans {
 
         size_t iteration = 0;
         while (iteration < m_MaxIterations) { // test if we have reached convergence or max samples
+            PROFILE_SCOPE("Iteration");
             DEBUG_PRINT("SerialSolver iteration " << iteration << " of " << m_MaxIterations);
 
             // in each iteration, we have to class the centroid, then accumulate the centroid to the new average. Generally speaking,
@@ -100,6 +102,7 @@ namespace kmeans {
                 m_DataSet.end(),
                 std::vector<Point>(m_PreviousCentroids.size(), Point(std::vector<double>(m_DataSet[0].numDimensions(), 0.0), 0)),
                 [&](std::vector<Point> acc, Point &point) {
+                    PROFILE_SCOPE("Accumulate");
                     auto closestCentroidInPrevious = point.findClosestPointInVector(m_PreviousCentroids);
 
                     if (closestCentroidInPrevious != m_PreviousCentroids.end()) {

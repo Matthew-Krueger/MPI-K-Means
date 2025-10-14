@@ -10,8 +10,13 @@
 #include <cmath>
 #include <ranges>
 
+#include "Instrumentation.hpp"
+
 namespace kmeans {
     std::expected<double, std::string> Point::calculateEuclideanDistance(const Point &other) const {
+        // don't profile the time is insignificant
+        //PROFILE_FUNCTION();
+
         // Guard against dimension mismatch.
         if (m_Data.size() != other.m_Data.size()) {
             return std::unexpected(
@@ -43,6 +48,8 @@ namespace kmeans {
     }
 
     std::expected<Point::FlattenedPoints, std::string> Point::flattenPoints(const std::vector<Point> &points) {
+        PROFILE_FUNCTION();
+
         // Return an error if no points are provided.
         if (points.empty()) {
             return std::unexpected("No points provided");
@@ -81,6 +88,8 @@ namespace kmeans {
 
     std::expected<std::vector<Point>, std::string>
     Point::unflattenPoints(const FlattenedPoints &flattenedPoints) {
+        PROFILE_FUNCTION();
+
         // Validate that the total number of elements in the flattened vector matches the expected count.
         // totalEntries: The expected total number of elements (numPoints * numDimensionsPerPoint).
         const size_t totalEntries = flattenedPoints.numDimensionsPerPoint * flattenedPoints.numPoints;
@@ -114,6 +123,8 @@ namespace kmeans {
     }
 
     std::expected<ClusterLocalAggregateSum, std::string> ClusterLocalAggregateSum::calculateCentroidLocalSum(const std::vector<Point> &points) {
+        PROFILE_FUNCTION();
+
         // Return an error if no points are provided. This should still run in critical paths.
         if (points.empty()) {
             return std::unexpected("No points provided");
@@ -152,6 +163,8 @@ namespace kmeans {
             points,
             Point(std::vector<double>(expectedNumberDimensions, 0.0)),
             [](Point acc, const Point &p) {
+                PROFILE_FUNCTION();
+
                 acc += p;
                 return acc;
             }
@@ -164,6 +177,7 @@ namespace kmeans {
     }
 
     Point& Point::operator+=(const Point &other) {
+        PROFILE_FUNCTION();
 
         // guard against invalid points being added together
         #ifndef NDEBUG
@@ -185,6 +199,7 @@ namespace kmeans {
     }
 
     Point& Point::operator/=(const double scalar) {
+        PROFILE_FUNCTION();
 
         // no need to check for compatability in a scalar division
         std::ranges::transform(
@@ -198,6 +213,7 @@ namespace kmeans {
     }
 
     std::vector<Point>::iterator Point::findClosestPointInVector(std::vector<Point>& other) const {
+        PROFILE_FUNCTION();
 
         // guard against empty iterator
         if (other.empty()) {

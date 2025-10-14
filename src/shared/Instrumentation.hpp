@@ -255,11 +255,11 @@ namespace instrumentation {
 }
 #ifdef BUILD_WITH_PROFILING
 #ifdef __GNUC__
-#define _PROFILE_FUNCTION_NAME                    __PRETTY_FUNCTION__
+#define __PROFILE_FUNCTION_NAME                    __PRETTY_FUNCTION__
 #else
 #define _PROFILE_FUNCTION_NAME                    __FUNCSIG__
 #endif
-#define _PROFILE_TIMER_NAME                       timer
+#define __PROFILE_TIMER_NAME                       timer
 #define PROFILE_BEGIN_SESSION(writer)             ::instrumentation::Instrumentor::initializeGlobalInstrumentor(writer)
 #define PROFILE_END_SESSION()                     ::instrumentation::Instrumentor::finalizeGlobalInstrumentor()
 #define PROFILE_SCOPE(name)                       ::instrumentation::Session session##__LINE__(name)
