@@ -87,123 +87,146 @@ namespace instrumentation {
     }
 
 #ifdef BUILD_WITH_MPI
-    MPIWriter::MPIWriter(const Config &config) : Writer(config.targetBufferSize) {
+    MPIWriter::MPIWriter(const Config& config) : Writer(config.targetBufferSize) {
         m_MyRank = std::numeric_limits<int>::max();
         m_Config = config;
 
         MPI_Comm_rank(MPI_COMM_WORLD, &m_MyRank);
+        MPI_Comm_size(MPI_COMM_WORLD, &m_WorldSize);
 
-        m_WriteBuffer = std::vector<char>(); // initialize the buffer
+        m_WriteBuffer.reserve(config.targetBufferSize * 2); // Pre-allocate
+        m_Displacements.reserve(config.targetBufferSize);
+        m_EntrySizes.reserve(config.targetBufferSize);
 
         m_IsFirstFlush = true;
     }
 
+
     MPIWriter::~MPIWriter() {
-        MPIWriter::flush();
-        if (std::ofstream file(m_Config.logFileName, std::ios::app); file.is_open()) {
-            MPIWriter::write_tail(file);
+        flush();
+        if (m_MyRank == m_Config.mainRank) {
+                if (std::ofstream file(m_Config.logFileName, std::ios::app); file.is_open()) {
+                    write_tail(file);
+                }
+
         }
     }
 
-    void MPIWriter::write(const std::vector<Entry> &entries) {
+    void MPIWriter::write(const std::vector<Entry>& entries) {
         if constexpr (INSTRUMENTATION_DEBUG_INSTRUMENTATION) {
             std::cout << "Writing an MPIWriter entry." << std::endl;
         }
 
-        // we can just directly copy to the buffer
-        for (const auto &entry: entries) {
-            const std::string &entryText = entry.to_string();
+        // Append entries to m_WriteBuffer and track their starting positions and sizes
+        for (const auto& entry : entries) {
+            const std::string& entryText = entry.to_string();
             if (!entryText.empty()) {
-                auto currentDisplacement = static_cast<uint32_t>(m_WriteBuffer.size());
-                m_Displacements.push_back(currentDisplacement);
+                m_Displacements.push_back(static_cast<uint32_t>(m_WriteBuffer.size()));
+                m_EntrySizes.push_back(static_cast<uint32_t>(entryText.size()));
 
-                // Reserve space and copy the string
                 size_t oldSize = m_WriteBuffer.size();
-                m_WriteBuffer.reserve(oldSize + entryText.size());
-                m_WriteBuffer.insert(m_WriteBuffer.begin(), entryText.begin(), entryText.end());
+                m_WriteBuffer.resize(oldSize + entryText.size());
+                std::copy(entryText.begin(), entryText.end(), m_WriteBuffer.begin() + oldSize);
             }
         }
 
         if constexpr (INSTRUMENTATION_DEBUG_INSTRUMENTATION) {
             std::cout << "Wrote an MPIWriter entry. Local Log Size: " << m_WriteBuffer.size() << " characters" << std::endl;
             std::cout << "Displacements: " << m_Displacements.size() << std::endl;
-            std::cout << "Contents: " << m_WriteBuffer.data() << std::endl;
+            std::cout << "Contents: ";
+            std::cout.write(m_WriteBuffer.data(), m_WriteBuffer.size());
+            std::cout << std::endl;
         }
     }
 
+    // Flush function
     void MPIWriter::flush() {
-
         if constexpr (INSTRUMENTATION_DEBUG_INSTRUMENTATION) {
             std::cout << "Flushing MPIWriter. Local buffer size: " << m_WriteBuffer.size() << std::endl;
         }
 
-        if (m_MyRank == m_Config.mainRank) {
+        int local_size = static_cast<int>(m_WriteBuffer.size());
+        int local_entry_count = static_cast<int>(m_EntrySizes.size());
 
+        if (m_MyRank == m_Config.mainRank) {
             if constexpr (INSTRUMENTATION_DEBUG_INSTRUMENTATION) {
                 std::cout << "Main rank flushing" << std::endl;
             }
 
-            // Main rank: receive from all processes and write to file/stderr/stdout
-            int world_size;
-            MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+            // Main rank: receive from all processes and write to file
+            std::vector<int> recv_counts(m_WorldSize, 0);
+            std::vector<int> entry_counts(m_WorldSize, 0);
 
-            // Receive counts from all processes
-            std::vector<int> recv_counts(world_size, 0);
-            const int size = static_cast<int>(m_Displacements.size());
-            MPI_Gather(&size, 1, MPI_INT,
+            // Gather total character counts and entry counts from all ranks
+            MPI_Gather(&local_size, 1, MPI_INT,
                        recv_counts.data(), 1, MPI_INT,
                        m_Config.mainRank, MPI_COMM_WORLD);
+            MPI_Gather(&local_entry_count, 1, MPI_INT,
+                       entry_counts.data(), 1, MPI_INT,
+                       m_Config.mainRank, MPI_COMM_WORLD);
 
-            // Calculate total size and displacements
-            std::vector<int> global_displacements(world_size, 0);
+            // Calculate total size and displacements for data
+            std::vector<int> data_displacements(m_WorldSize, 0);
             int total_size = 0;
-            for (int i = 0; i < world_size; ++i) {
-                global_displacements[i] = total_size;
+            for (int i = 0; i < m_WorldSize; ++i) {
+                data_displacements[i] = total_size;
                 total_size += recv_counts[i];
             }
 
-            // Allocate receive buffer
-            std::vector<char> recv_buffer(total_size);
+            // Calculate total entries and displacements for entry sizes
+            int total_entries = 0;
+            std::vector<int> entry_displacements(m_WorldSize, 0);
+            for (int i = 0; i < m_WorldSize; ++i) {
+                entry_displacements[i] = total_entries;
+                total_entries += entry_counts[i];
+            }
 
-            // Gather the actual data
-            MPI_Gatherv(m_WriteBuffer.data(), static_cast<int>(m_Displacements.size()), MPI_CHAR,
-                        recv_buffer.data(), recv_counts.data(), global_displacements.data(), MPI_CHAR,
+            // Allocate receive buffers
+            std::vector<char> recv_buffer(total_size);
+            std::vector<int> all_entry_sizes(total_entries);
+
+            // Gather entry sizes
+            MPI_Gatherv(m_EntrySizes.data(), local_entry_count, MPI_INT,
+                        all_entry_sizes.data(), entry_counts.data(), entry_displacements.data(), MPI_INT,
                         m_Config.mainRank, MPI_COMM_WORLD);
 
-            // Now write to the appropriate destination
-            std::ofstream file(m_Config.logFileName, std::ios::app); // Append to avoid overwriting
+            // Gather actual data
+            MPI_Gatherv(m_WriteBuffer.data(), local_size, MPI_CHAR,
+                        recv_buffer.data(), recv_counts.data(), data_displacements.data(), MPI_CHAR,
+                        m_Config.mainRank, MPI_COMM_WORLD);
 
-            if (file.is_open()) {
-                if (m_IsFirstFlush) {
-                    write_preamble(file);
-                    m_IsFirstFlush = false;
+            // Write to the appropriate destination
+            if (std::ofstream file(m_Config.logFileName, std::ios::app); file.is_open()) {
+                    if (m_IsFirstFlush) {
+                        write_preamble(file);
+                        m_IsFirstFlush = false;
+                    }
+                    writeEntriesToFile(recv_buffer, all_entry_sizes, file);
+                    file.flush();
                 }
-
-                writeEntriesToFile(recv_buffer, global_displacements, file);
-                file.flush();
-
-            } else {
-                std::cerr << "Failed to open file: " << m_Config.logFileName << std::endl;
-            }
 
             if constexpr (INSTRUMENTATION_DEBUG_INSTRUMENTATION) {
                 std::cout << "Main rank finished flushing" << std::endl;
             }
 
         } else {
-
             if constexpr (INSTRUMENTATION_DEBUG_INSTRUMENTATION) {
                 std::cout << "Non-main rank flushing" << std::endl;
             }
 
             // Non-main ranks: send data to main rank
-            int local_count = static_cast<int>(m_Displacements.size());
-            MPI_Gather(&local_count, 1, MPI_INT,
-                       nullptr, 0, MPI_CHAR,
+            MPI_Gather(&local_size, 1, MPI_INT,
+                       nullptr, 0, MPI_INT,
+                       m_Config.mainRank, MPI_COMM_WORLD);
+            MPI_Gather(&local_entry_count, 1, MPI_INT,
+                       nullptr, 0, MPI_INT,
                        m_Config.mainRank, MPI_COMM_WORLD);
 
-            if (local_count > 0) {
-                MPI_Gatherv(m_WriteBuffer.data(), local_count, MPI_CHAR,
+            if (local_size > 0) {
+                MPI_Gatherv(m_EntrySizes.data(), local_entry_count, MPI_INT,
+                            nullptr, nullptr, nullptr, MPI_INT,
+                            m_Config.mainRank, MPI_COMM_WORLD);
+                MPI_Gatherv(m_WriteBuffer.data(), local_size, MPI_CHAR,
                             nullptr, nullptr, nullptr, MPI_CHAR,
                             m_Config.mainRank, MPI_COMM_WORLD);
             }
@@ -211,41 +234,46 @@ namespace instrumentation {
             if constexpr (INSTRUMENTATION_DEBUG_INSTRUMENTATION) {
                 std::cout << "Non-main rank finished flushing" << std::endl;
             }
-
         }
+
+        // Ensure all ranks complete communication before clearing buffers
+        MPI_Barrier(MPI_COMM_WORLD);
 
         // Clear buffers after flush
         m_WriteBuffer.clear();
         m_Displacements.clear();
+        m_EntrySizes.clear();
     }
 
-    void MPIWriter::writeEntriesToFile(const std::vector<char> &all_data, const std::vector<int> &global_displacements,
-                                       std::ostream &file) {
-        if (all_data.empty() || global_displacements.empty()) {
+    void MPIWriter::writeEntriesToFile(const std::vector<char>& all_data, const std::vector<int>& entry_sizes, std::ostream& file) {
+        if (all_data.empty() || entry_sizes.empty()) {
             return;
         }
 
-        size_t offset = 0;
         bool first_entry = true;
+        size_t offset = 0;
 
-        // this is just conceptually easier to understand as a for loop rather than functionally
-        for (size_t i = 0; i < global_displacements.size(); ++i) {
-            const char *entry_start = all_data.data() + global_displacements[i];
-            const char *entry_end = (i + 1 < global_displacements.size())
-                                        ? entry_start + (global_displacements[i + 1] - global_displacements[i])
-                                        : entry_start + (all_data.size() - global_displacements[i]);
-
-            if (entry_end > entry_start && entry_end - entry_start > 0) {
-                if (!first_entry) {
-                    file << COMMA_NEWLINE;
-                }
-
-                // Write the entry as a string
-                file.write(entry_start, entry_end - entry_start);
-                first_entry = false;
+        for (size_t i = 0; i < entry_sizes.size(); ++i) {
+            if (entry_sizes[i] == 0) {
+                continue; // Skip empty entries
             }
+            if (offset + entry_sizes[i] > all_data.size()) {
+                break; // Prevent buffer overrun
+            }
+
+            if (!first_entry) {
+                file << COMMA_NEWLINE;
+            }
+            file.write(all_data.data() + offset, entry_sizes[i]);
+            first_entry = false;
+            offset += entry_sizes[i];
         }
     }
+
+    uint32_t MPIWriter::getProcessID() {
+        return m_MyRank;
+    }
+
 
 #endif
 }

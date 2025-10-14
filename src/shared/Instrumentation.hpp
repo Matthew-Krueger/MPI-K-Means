@@ -57,6 +57,7 @@ namespace instrumentation {
             const char* name;
             long long start, end;
             uint32_t threadID;
+            uint32_t processID;
         };
 
         /**
@@ -78,7 +79,7 @@ namespace instrumentation {
             oss << "\"dur\":" << (result.end - result.start) << ',';
             oss << R"("name":")" << name << "\",";
             oss << R"("ph":"X",)";
-            oss << "\"pid\":0,";
+            oss << "\"pid\":" << result.processID << ",";
             oss << "\"tid\":" << result.threadID << ",";
             oss << "\"ts\":" << result.start;
             oss << "}";
@@ -112,6 +113,7 @@ namespace instrumentation {
 
         virtual void write(const std::vector<Entry>& entries) = 0;
         virtual uint32_t getThreadID() { return std::hash<std::thread::id>{}(std::this_thread::get_id()); }
+        virtual uint32_t getProcessID() { return 0; }
 
         /**
          *  @brief Flushes the buffer to the disk.
@@ -177,7 +179,8 @@ namespace instrumentation {
 
                 if (auto instrumentor = Instrumentor::getGlobalInstrumentor().lock()) {
                     uint32_t threadID = instrumentor->getWriter()->getThreadID();
-                    instrumentor->recordEntry(Entry::ProfileResult{m_Name, convertTimepointToMicroseconds(m_StartTime), end, threadID});
+                    uint32_t processID = instrumentor->getWriter()->getProcessID();
+                    instrumentor->recordEntry(Entry::ProfileResult{m_Name, convertTimepointToMicroseconds(m_StartTime), end, threadID, processID});
                 }
 
                 m_Stopped = true;
@@ -222,11 +225,15 @@ namespace instrumentation {
         void write(const std::vector<Entry>& entries) override;
         void flush() override;
 
+        uint32_t getProcessID() override;
+
     private:
         Config m_Config;
-        std::vector<char> m_WriteBuffer;
-        std::vector<uint32_t> m_Displacements;
+        std::vector<char> m_WriteBuffer;      // Stores concatenated entry strings as chars
+        std::vector<uint32_t> m_Displacements; // Tracks start position of each entry
+        std::vector<uint32_t> m_EntrySizes;   // Tracks size of each entry
         int m_MyRank;
+        int m_WorldSize;
         bool m_IsFirstFlush = true;
         static constexpr const char* PREAMBLE = "[\n";
         static constexpr const char* TAIL = "\n]";
