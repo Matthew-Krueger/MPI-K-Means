@@ -19,16 +19,11 @@ namespace kmeans {
     struct AddPointsFuctor {
 
         std::vector<Point> operator()(const std::vector<Point>& a, const std::vector<Point>& b) const {
-            int rank;
-            MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-            std::cerr << "Rank " << rank << " a: " << a.size() << " b: " << b.size() << std::endl;
-
             std::vector<Point> finalResult;
             finalResult.reserve(a.size());
             std::ranges::transform(a, b, std::back_inserter(finalResult), [&](const Point& left, const Point& right) {
                 Point result = left + right;
                 result.setCount(left.getCount() + right.getCount());
-                std::cerr << "Rank " << rank << " result: " << result << std::endl;
                 return result;
             });
             return finalResult;

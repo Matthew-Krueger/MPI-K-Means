@@ -31,7 +31,7 @@ int main(int argc, char** argv)
 
         kmeans::DataSet::Config datasetConfig{
             {{0,10}, {10,20}, {20,30}},
-            10000,
+            1000000,
             3,
             20,
             3.5,

@@ -9,4 +9,14 @@
 #define DEBUG_FLAG false
 #endif
 
+#define undefflag
+#ifdef undefflag
+#undef undefflag
+#undef DEBUG_PRINT
+#undef DEBUG_FLAG
+#define DEBUG_PRINT(x) (void(0));
+#define DEBUG_FLAG false
+#endif
+
+
 #endif
