@@ -32,6 +32,8 @@ namespace kmeans {
         inline const DataSet& getDataSet() const { return m_DataSet; }
         inline const std::optional<std::vector<Point>>& getCalculatedCentroidsAtCompletion() const { return m_CalculatedCentroidsAtCompletion; }
 
+        inline const std::optional<size_t>& getFinalIterationCount() const { return m_FinalIterationCount; }
+
     private:
         DataSet m_DataSet;
         std::vector<Point> m_CurrentCentroids;
@@ -39,6 +41,7 @@ namespace kmeans {
         size_t m_MaxIterations;
         double m_ConvergenceThreshold;
         std::optional<std::vector<Point>> m_CalculatedCentroidsAtCompletion = std::nullopt;
+        std::optional<size_t> m_FinalIterationCount = std::nullopt;
 
 
     };

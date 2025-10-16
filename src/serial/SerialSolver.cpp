@@ -12,10 +12,10 @@
 
 #include "../shared/Utils.hpp"
 
-namespace kmeans {
 
+namespace kmeans {
     SerialSolver::SerialSolver(Config &config) {
-    PROFILE_FUNCTION();
+        PROFILE_FUNCTION();
         m_DataSet = config.dataSet;
 
         DEBUG_PRINT("Starting Centroid Count: " << config.startingCentroidCount);
@@ -40,27 +40,29 @@ namespace kmeans {
         // reserve space for centroids appropriately. No need to reserve previous as it'll get dumped anyway as soon as we start the run
         m_CurrentCentroids.reserve(config.startingCentroidCount);
 
-        // now, we generate our centroids
-        DEBUG_PRINT("Copied Solver Configs");
+        {
+            // now, we generate our centroids
+            DEBUG_PRINT("Copied Solver Configs");
 
-        // first, create our RNG
-        std::mt19937 rng(seed);
-        std::uniform_int_distribution<size_t> dist(0, m_DataSet.size() - 1);
+            // first, create our RNG
+            std::mt19937 rng(seed);
+            std::uniform_int_distribution<size_t> dist(0, m_DataSet.size() - 1);
 
-        // instead of generating new centroids, we'll just randomly pull existing points BY COPY!
-        // So, we'll use an unordered set. There's not a great functional way to do this, and the standard way makes much more sense.
-        std::unordered_set<size_t> indices;
-        while (indices.size() < numCentroids) {
-            size_t index = dist(rng);
-            indices.emplace(index);
+            // instead of generating new centroids, we'll just randomly pull existing points BY COPY!
+            // So, we'll use an unordered set. There's not a great functional way to do this, and the standard way makes much more sense.
+            std::unordered_set<size_t> indices;
+            while (indices.size() < numCentroids) {
+                size_t index = dist(rng);
+                indices.emplace(index);
+            }
+
+
+            std::ranges::transform(indices,
+                                   std::back_inserter(m_CurrentCentroids),
+                                   [&](const size_t index) { return Point(m_DataSet[index]); }
+                                   // explicitly copy the data so we know *FOR SURE* it's unique.
+            );
         }
-
-
-        std::ranges::transform(indices,
-                               std::back_inserter(m_CurrentCentroids),
-                               [&](const size_t index) { return Point(m_DataSet[index]); } // explicitly copy the data so we know *FOR SURE* it's unique.
-        );
-
     }
 
 
@@ -73,13 +75,14 @@ namespace kmeans {
         // the vector average becomes the new
 
         std::cout << "Initial Centroids" << std::endl;
-        for (auto &centroid : m_CurrentCentroids) {
+        for (auto &centroid: m_CurrentCentroids) {
             std::cout << centroid << std::endl;
         }
 
 
         size_t iteration = 0;
-        while (iteration < m_MaxIterations) { // test if we have reached convergence or max samples
+        while (iteration < m_MaxIterations) {
+            // test if we have reached convergence or max samples
             PROFILE_SCOPE("Iteration");
             DEBUG_PRINT("SerialSolver iteration " << iteration << " of " << m_MaxIterations);
 
@@ -100,7 +103,8 @@ namespace kmeans {
             m_CurrentCentroids = std::accumulate(
                 m_DataSet.begin(),
                 m_DataSet.end(),
-                std::vector<Point>(m_PreviousCentroids.size(), Point(std::vector<double>(m_DataSet[0].numDimensions(), 0.0), 0)),
+                std::vector<Point>(m_PreviousCentroids.size(),
+                                   Point(std::vector<double>(m_DataSet[0].numDimensions(), 0.0), 0)),
                 [&](std::vector<Point> acc, Point &point) {
                     PROFILE_SCOPE("Accumulate");
                     auto closestCentroidInPrevious = point.findClosestPointInVector(m_PreviousCentroids);
@@ -108,9 +112,9 @@ namespace kmeans {
                     if (closestCentroidInPrevious != m_PreviousCentroids.end()) {
                         size_t centroidIndex = std::distance(m_PreviousCentroids.begin(), closestCentroidInPrevious);
                         acc[centroidIndex] += point;
-                        acc[centroidIndex].setCount(acc[centroidIndex].getCount()+1);
+                        acc[centroidIndex].setCount(acc[centroidIndex].getCount() + 1);
                         return acc;
-                    }else {
+                    } else {
                         throw std::runtime_error("Centroid not found in previous centroids");
                     }
                 }
@@ -118,7 +122,7 @@ namespace kmeans {
 
             // transform the m_CurrentCentroids by the scalar
             // so that we have the actual average
-            std::ranges::for_each(m_CurrentCentroids, [](Point& centroid) {
+            std::ranges::for_each(m_CurrentCentroids, [](Point &centroid) {
                 if (centroid.getCount() > 0) {
                     centroid /= static_cast<double>(centroid.getCount());
                 }
@@ -131,16 +135,17 @@ namespace kmeans {
             }
 
             // now we're done with an iteration.
-            std::cout << "Iteration " << iteration << std::endl;
-            for (auto &centroid : m_CurrentCentroids) {
-                std::cout << centroid << std::endl;
+            if constexpr (DEBUG_FLAG) {
+                std::cout << "Iteration " << iteration << std::endl;
+                for (auto &centroid: m_CurrentCentroids) {
+                    std::cout << centroid << std::endl;
+                }
             }
 
             iteration++;
         }
 
+        m_FinalIterationCount = iteration;
         DEBUG_PRINT("Centroids are converged, or terminated due to too many iterations");
-
     }
-
 } // kmeans

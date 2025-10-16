@@ -19,8 +19,6 @@ namespace kmeans {
     auto DataSet::generateCluster(const Point &clusterCenter, size_t numberPoints, double clusterSpread,
                                   std::shared_ptr<std::mt19937> rng) {
         PROFILE_FUNCTION();
-        std::vector<Point> cluster;
-        cluster.reserve(numberPoints);
 
         // reserve the vector
         size_t clusterNumberDimensions = clusterCenter.getData().size();

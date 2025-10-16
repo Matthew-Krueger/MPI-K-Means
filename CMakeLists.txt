@@ -27,6 +27,8 @@ add_executable(kmeans_mpi
         src/shared/Utils.cpp
         src/shared/Utils.hpp
         src/shared/Instrumentation.cpp
-        src/shared/Instrumentation.hpp)
+        src/shared/Instrumentation.hpp
+        src/mpi/MPISolver.cpp
+        src/mpi/MPISolver.hpp)
 
 target_link_libraries(kmeans_mpi PRIVATE MPI::MPI_CXX ${Boost_LIBRARIES})

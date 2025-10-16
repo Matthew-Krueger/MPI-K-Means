@@ -3,6 +3,10 @@
 
 #ifndef NDEBUG
 #define DEBUG_PRINT(x) std::cout << x << std::endl
+#define DEBUG_FLAG true
+#else
+#define DEBUG_PRINT(x) (void(0));
+#define DEBUG_FLAG false
 #endif
 
 #endif

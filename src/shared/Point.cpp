@@ -154,9 +154,6 @@ namespace kmeans {
 
 #endif
 
-        // Initialize a vector to store the sum of each dimension
-
-
         // Sum all elements of each point into one point in a fold left reduction
         // Since fold left uses move semantics
         auto result2 = std::ranges::fold_left(
@@ -226,6 +223,7 @@ namespace kmeans {
         bool foundValid = false;
 
         // iterate through the other vector, and find the closest point to this one.
+        // this was one function that should not be functional, for unknown reasons
         for (auto it = other.begin(); it != other.end(); ++it) {
             auto dist = calculateEuclideanDistance(*it);
 

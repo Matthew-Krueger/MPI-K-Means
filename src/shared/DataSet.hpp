@@ -120,6 +120,8 @@ namespace kmeans {
         inline iterator end() { return m_Points.end(); }
         [[nodiscard]] inline const_iterator end() const { return m_Points.end(); }
 
+        inline const std::vector<Point>& getPoints() const { return m_Points; }
+
     private:
         inline void reserve(size_t size) { m_Points.reserve(size); }
         inline void emplace_back(const Point &toEmplace) { m_Points.emplace_back(toEmplace); }

@@ -13,7 +13,7 @@
 #include <variant>
 
 #define BUILD_WITH_MPI
-#define BUILD_WITH_PROFILING
+//#define BUILD_WITH_PROFILING
 
 
 namespace instrumentation {
@@ -265,7 +265,7 @@ namespace instrumentation {
 #define PROFILE_SCOPE(name)                       ::instrumentation::Session session##__LINE__(name)
 #define PROFILE_FUNCTION()                        PROFILE_SCOPE(__PROFILE_FUNCTION_NAME)
 #else
-#define PROFILE_BEGIN_SESSION(name, filepath)     (void(0))
+#define PROFILE_BEGIN_SESSION(writer)             (void(0))
 #define PROFILE_END_SESSION()                     (void(0))
 #define PROFILE_FUNCTION()                        (void(0))
 #define PROFILE_SCOPE(name)                       (void(0))
