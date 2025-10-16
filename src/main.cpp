@@ -31,17 +31,19 @@ int main(int argc, char** argv)
 
         kmeans::DataSet::Config datasetConfig{
             {{0,10}, {10,20}, {20,30}},
-            10,
+            10000,
             3,
-            2,
+            20,
             3.5,
             1
         };
 
 
         kmeans::DataSet dataSet = kmeans::DataSet();
+        std::optional<std::vector<kmeans::Point>> knownGoodCentroids;
         if (worldCommunicator.rank() == 0) {
             dataSet = kmeans::DataSet(datasetConfig);
+            knownGoodCentroids = dataSet.getKnownGoodCentroids();
         }
 
         DEBUG_PRINT("Finished creating Dataset");
@@ -74,7 +76,7 @@ int main(int argc, char** argv)
             0.0001,
             std::move(dataSet),
             1234,
-            2,
+            20,
             0,
             1
         });
@@ -86,8 +88,21 @@ int main(int argc, char** argv)
         mpiSolver.run();
 
         std::cout << "I am rank " << worldCommunicator.rank() << " of a world size " << worldCommunicator.size() << std::endl;
-
-
+        if (worldCommunicator.rank() == 0) {
+            std::cout << "Known good centroids:" << std::endl;
+            if (knownGoodCentroids.has_value()) {
+                for (auto&point : knownGoodCentroids.value()) {
+                    std::cout << "\tKnown: " << point << std::endl;
+                }
+            }
+            std::cout << "Final Centroids:" << std::endl;
+            if (mpiSolver.getCalculatedCentroidsAtCompletion().has_value()) {
+                for (auto&point : mpiSolver.getCalculatedCentroidsAtCompletion().value()) {
+                    std::cout << "\tCalculated:" << point << std::endl;
+                }
+            }
+            std::cout << "Iterations " << mpiSolver.getFinalIterationCount().value_or(0) << std::endl;
+        }
 
         PROFILE_END_SESSION();
 

@@ -117,7 +117,7 @@ namespace kmeans {
                 m_LocalDataSet.begin(),
                 m_LocalDataSet.end(),
                 std::vector<Point>(m_PreviousCentroids.size(),
-                                   Point(std::vector<double>(m_LocalDataSet[0].numDimensions(), 0.0), 0)),
+                                   Point(std::vector<double>(m_PreviousCentroids[0].numDimensions(), 0.0), 0)),
                 [&](std::vector<Point> acc, Point &point) {
                     PROFILE_SCOPE("Accumulate");
                     auto closestCentroidInPrevious = point.findClosestPointInVector(m_PreviousCentroids); // class to previous
@@ -184,6 +184,9 @@ namespace kmeans {
             ++iteration;
 
         }
+
+        m_FinalIterationCount = iteration;
+        m_CalculatedCentroidsAtCompletion = m_CurrentCentroids;
 
     }
 

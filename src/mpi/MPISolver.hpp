@@ -44,6 +44,7 @@ namespace kmeans {
 
 
         inline std::optional<size_t> getFinalIterationCount() const { return m_FinalIterationCount; }
+        inline const std::optional<std::vector<Point>>& getCalculatedCentroidsAtCompletion() const { return m_CalculatedCentroidsAtCompletion; }
 
     private:
         DataSet m_LocalDataSet;
