@@ -12,9 +12,11 @@ add_compile_options(-O3 -march=native -ftree-vectorize -flto -std=c++23)
 #cmake_policy(SET CMP0144 NEW)
 #cmake_policy(SET CMP0167 OLD)
 set(BOOST_ROOT /boost/boost_1_82_0)
-find_package(Boost 1.82.0 COMPONENTS mpi serialization random REQUIRED)
+find_package(Boost 1.82.0 COMPONENTS mpi serialization program_options random REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
+
+add_compile_definitions(BUILD_WITH_MPI)
 
 add_executable(kmeans_mpi
         src/main.cpp
@@ -29,6 +31,10 @@ add_executable(kmeans_mpi
         src/shared/Instrumentation.cpp
         src/shared/Instrumentation.hpp
         src/mpi/MPISolver.cpp
-        src/mpi/MPISolver.hpp)
+        src/mpi/MPISolver.hpp
+        src/mpi/MPITester.cpp
+        src/mpi/MPITester.hpp
+        src/shared/Timer.cpp
+        src/shared/Timer.hpp)
 
 target_link_libraries(kmeans_mpi PRIVATE MPI::MPI_CXX ${Boost_LIBRARIES})

@@ -12,7 +12,6 @@
 #include <thread>
 #include <variant>
 
-#define BUILD_WITH_MPI
 //#define BUILD_WITH_PROFILING
 
 

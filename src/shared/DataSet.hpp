@@ -89,7 +89,7 @@ namespace kmeans {
             * @brief Seed value used to initialize the random number generator.
             * This seed is critical for reproducibility of results in simulations and datasets generation processes.
             */
-            long seed;
+            uint64_t seed;
         };
 
         DataSet() = default;
