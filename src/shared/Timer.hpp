@@ -47,6 +47,19 @@
             inline double getTimeSecondsDouble() const { return timeMicroseconds/static_cast<double>(1e6); }
         };
 
+        /**
+         * Specialization of TimeResult for void functions.
+         * It does not include a functionResult member.
+         */
+        template <>
+        struct TimeResult<void> {
+            uint64_t timeMicroseconds;
+
+            inline uint64_t getTimeMilliseconds() const { return timeMicroseconds / 1000UL; }
+            inline uint64_t getTimeSeconds() const { return timeMicroseconds / 1000000UL; }
+            inline double getTimeSecondsDouble() const { return timeMicroseconds / static_cast<double>(1e6); }
+        };
+
         class Timer {
         public:
             /**
@@ -65,25 +78,49 @@
             std::weak_ptr<uint64_t> m_TimeReference;
         };
 
-        template<typename FuncToTime>
+        template <typename FuncToTime>
         /**
          * Measures the execution time of a given function and returns the result along with the time taken.
+         * This overload handles functions that return a non-void value.
          *
          * @tparam FuncToTime The type of the function whose execution time is to be measured.
          *                    The function should take no arguments and return a value.
          * @param toTime A callable function whose execution time will be measured.
          * @return A TimeResult object containing the result of the function execution along with the time taken in microseconds.
          */
-        TimeResult<decltype(std::declval<FuncToTime>()())> time(FuncToTime toTime) {
-            TimeResult<decltype(std::declval<FuncToTime>()())> result;
-            std::shared_ptr<uint64_t> timeReference = 0;
+        std::enable_if_t<!std::is_void_v<std::invoke_result_t<FuncToTime>>, TimeResult<std::invoke_result_t<FuncToTime>>>
+        time(FuncToTime toTime) {
+            using ResultType = std::invoke_result_t<FuncToTime>;
+            TimeResult<ResultType> result;
+            auto timeReference = std::make_shared<uint64_t>(0);
             {
                 Timer timer(timeReference);
                 result.functionResult = toTime();
             }
             result.timeMicroseconds = *timeReference;
             return result;
+        }
 
+        template <typename FuncToTime>
+        /**
+         * Overload for functions returning void.
+         * Measures the execution time without attempting to store a return value.
+         *
+         * @tparam FuncToTime The type of the function whose execution time is to be measured.
+         *                    The function should take no arguments and return void.
+         * @param toTime A callable function whose execution time will be measured.
+         * @return A TimeResult<void> object containing only the time taken in microseconds.
+         */
+        std::enable_if_t<std::is_void_v<std::invoke_result_t<FuncToTime>>, TimeResult<void>>
+        time(FuncToTime toTime) {
+            TimeResult<void> result;
+            auto timeReference = std::make_shared<uint64_t>(0);
+            {
+                Timer timer(timeReference);
+                toTime(); // Just execute the function
+            }
+            result.timeMicroseconds = *timeReference;
+            return result;
         }
 
     }
