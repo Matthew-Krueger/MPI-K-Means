@@ -6,7 +6,6 @@
 
 #include <algorithm>
 #include <fstream>
-#include <boost/tuple/detail/tuple_basic.hpp>
 
 //#define DEBUG_INSTRUMENTATION
 
