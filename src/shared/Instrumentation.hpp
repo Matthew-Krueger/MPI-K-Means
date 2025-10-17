@@ -11,6 +11,8 @@
 #include <memory>
 #include <thread>
 #include <variant>
+#include <cstring>
+#include <sstream>
 
 //#define BUILD_WITH_PROFILING
 
