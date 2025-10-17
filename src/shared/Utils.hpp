@@ -9,6 +9,8 @@
 #include <ranges>
 #include <vector>
 #include <optional>
+#include <unordered_set>
+
 #include "Point.hpp"
 
 namespace kmeans {
@@ -61,6 +63,11 @@ namespace kmeans {
 
     inline double getMaxCentroidDifference(const std::vector<Point>& lhs, const std::vector<Point>& rhs) {
 
+        return 0.0;
+
+    }
+
+        /* what I wrote is not correct
         auto centroidCombinedView = std::ranges::views::zip(lhs, rhs);
         auto distances = std::ranges::transform_view(
             centroidCombinedView,
@@ -73,9 +80,9 @@ namespace kmeans {
             }
         );
 
-        return std::ranges::max(distances);
+        return std::ranges::max(distances);*/
 
-    }
+    //}
 
 }
 

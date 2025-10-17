@@ -150,11 +150,38 @@ int main(int argc, char **argv) {
                     << clusterSpread << ','
                     << globalSeed << ','
                     << time.getTimeSecondsDouble() << ','
-                    << (maxIterations == solver.getFinalIterationCount()) << ','
+                    << ((maxIterations == solver.getFinalIterationCount()) ? "yes" : "no") << ','
                     << kmeans::getMaxCentroidDifference(solver.getCalculatedCentroidsAtCompletion().value(), dataSet.getKnownGoodCentroids().value()) << std::endl;;
             }
         } else {
             // runs MPI Algorithm.
+            kmeans::MPISolver::Config config(
+                maxIterations,
+                convergenceThreshold,
+                kmeans::DataSet(dataSet.getPoints()),
+                runRandom,
+                numTrueClusters,
+                0,
+                2550
+            );
+            kmeans::MPISolver solver(std::move(config), worldCommunicator);
+
+            auto time = timer::time([&solver] {
+                solver.run();
+            });
+
+            if (worldCommunicator.rank() == 0) {
+                ds  << worldCommunicator.size() << ','
+                    << numGeneratedSamples << ','
+                    << numDimensions << ','
+                    << numTrueClusters << ','
+                    << clusterSpread << ','
+                    << globalSeed << ','
+                    << time.getTimeSecondsDouble() << ','
+                    << (maxIterations == solver.getFinalIterationCount()) << ','
+                    << kmeans::getMaxCentroidDifference(solver.getCalculatedCentroidsAtCompletion().value(), dataSet.getKnownGoodCentroids().value()) << std::endl;
+            }
+
         }
     }
 
@@ -256,3 +283,4 @@ int main(int argc, char **argv) {
 //
 //     }
 //}
+

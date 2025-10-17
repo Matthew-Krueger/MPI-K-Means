@@ -22,6 +22,16 @@ namespace kmeans {
             size_t startingCentroidCount;
             int mainRank;
             int workingTag;
+
+            Config() = delete;
+            Config(size_t maxIterations, double convergenceThreshold, DataSet dataSet, size_t startingCentroidSeed, size_t startingCentroidCount, int mainRank, int workingTag) :
+                    maxIterations(maxIterations),
+                    convergenceThreshold(convergenceThreshold),
+                    dataSet(std::move(dataSet)),
+                    startingCentroidSeed(startingCentroidSeed),
+                    startingCentroidCount(startingCentroidCount),
+                    mainRank(mainRank),
+                    workingTag(workingTag) {}
         };
 
         MPISolver() = delete;
