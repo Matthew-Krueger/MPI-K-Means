@@ -70,16 +70,9 @@ namespace kmeans {
         PROFILE_FUNCTION();
 
         // so the algorithm is roughly this
-        // Calculate the *closest* centroid and class the point as this centroid
+        // Calculates the *closest* centroid and class the point as this centroid
         // Then calculate the vector average of all the points
         // the vector average becomes the new
-
-        std::cout << "Initial Centroids" << std::endl;
-        for (auto &centroid: m_CurrentCentroids) {
-            std::cout << centroid << std::endl;
-        }
-
-
         size_t iteration = 0;
         while (iteration < m_MaxIterations) {
             // test if we have reached convergence or max samples
@@ -146,6 +139,7 @@ namespace kmeans {
         }
 
         m_FinalIterationCount = iteration;
+        m_CalculatedCentroidsAtCompletion = m_CurrentCentroids;
         DEBUG_PRINT("Centroids are converged, or terminated due to too many iterations");
     }
 } // kmeans

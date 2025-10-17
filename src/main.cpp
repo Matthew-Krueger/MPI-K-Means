@@ -11,27 +11,39 @@
 #include <__ranges/transform_view.h>
 
 #include "shared/Timer.hpp"
+#include "shared/DualOutputStream.hpp"
+#include "shared/Utils.hpp"
 
 int main(int argc, char **argv) {
     DEBUG_PRINT("Creating MPI Environment");
     boost::mpi::environment mpiEnvironment(argc, argv);
     boost::mpi::communicator worldCommunicator;
 
-    size_t numTotalSamples;
+    size_t maxIterations;
+    double convergenceThreshold;
+    size_t numGeneratedSamples;
     size_t numDimensions;
     size_t numTrueClusters;
     double clusterSpread;
     long globalSeed;
+    bool printHeader;
+    std::string filename;
+    size_t numTrials;
 
     try {
         boost::program_options::options_description desc("Allowed options");
         desc.add_options()
                 ("help", "produce help message")
-                ("samples", boost::program_options::value<size_t>(&numTotalSamples)->default_value(1000), "Number of samples in the dataset")
+                ("max-iterations", boost::program_options::value<size_t>(&maxIterations)->default_value(10000), "Maximum number of iterations to run")
+                ("num-samples", boost::program_options::value<size_t>(&numGeneratedSamples)->default_value(1000), "Number of samples in the dataset")
                 ("dimensions", boost::program_options::value<size_t>(&numDimensions)->default_value(3), "Number of dimensions. Dimension distribution will be given via global size")
                 ("clusters", boost::program_options::value<size_t>(&numTrueClusters)->default_value(3), "Number of clusters - used for both generation and k means parameters")
                 ("spread", boost::program_options::value<double>(&clusterSpread)->default_value(3.5), "The standard deviation of the points - i.e. how wide the cluster is")
-                ("seed", boost::program_options::value<long>(&globalSeed)->default_value(1234), "Seed for the random number generator - all other sub seeds will be generated from this");
+                ("seed", boost::program_options::value<long>(&globalSeed)->default_value(1234), "Seed for the random number generator - all other sub seeds will be generated from this")
+                ("print-header", boost::program_options::bool_switch(&printHeader), "Print the header for the output file")
+                ("filename", boost::program_options::value<std::string>(&filename)->default_value("output.csv"), "Filename to write output to")
+                ("convergence-threshold", boost::program_options::value<double>(&convergenceThreshold)->default_value(0.0001), "Threshold for convergence.")
+                ("trials", boost::program_options::value<size_t>(&numTrials)->default_value(10), "Number of trials to run");
 
         boost::program_options::command_line_parser parser{argc, argv};
         parser.options(desc).allow_unregistered().style(
@@ -64,11 +76,11 @@ int main(int argc, char **argv) {
     // we'll create our dataset no matter what
     // in a child scope so we can dump all associated data quickly
     kmeans::DataSet dataSet;
-    {
+    std::mt19937 generator(globalSeed);
+    std::uniform_int_distribution<size_t> subSeedGenerator(1, std::numeric_limits<size_t>::max());
+    std::uniform_real_distribution dimensionGenerator(-100000.0, 100000.0); // we'll use a large range to make sure we don't get any weird values
 
-        std::mt19937 generator(globalSeed);
-        std::uniform_int_distribution<size_t> subSeedGenerator(1, std::numeric_limits<size_t>::max());
-        std::uniform_real_distribution dimensionGenerator(-100000.0, 100000.0); // we'll use a large range to make sure we don't get any weird values
+    {
 
         // create our distribution
         auto dimensionRangeView = std::ranges::views::iota(static_cast<size_t>(0), numDimensions)
@@ -85,7 +97,7 @@ int main(int argc, char **argv) {
 
         kmeans::DataSet::Config datasetConfig{
             dimensionConfig,
-            numTotalSamples,
+            numGeneratedSamples,
             dimensionConfig.size(),
             numTrueClusters,
             clusterSpread,
@@ -96,19 +108,54 @@ int main(int argc, char **argv) {
 
     }
 
+    // Creating my DualStream
+    DualStream ds(std::cout, filename);
+
     // print the table header
-    std::cout << "Number Processes," << "Number Samples," << "Number Dimensions," << "Number Clusters," << "Spread," << "Seed," << "Convergence Time," << "Did Reach Convergence?" << std::endl;
+    if (printHeader && worldCommunicator.rank() == 0) {
+        ds << "Number Processes," << "Number Samples," << "Number Dimensions," << "Number Clusters," << "Spread," << "Seed," << "Run Time (s)," << "Did Reach Convergence?," << "Max Centroid Difference" << std::endl;
+    }
 
-    // now that we have our dataset, we can actually go to the correct function.
-    // note, we are implicitly going to be calling our serial code when world size is one
-    if (worldCommunicator.size() == 1) {
-        // runs serial algorithm
-        // for the serial algorithm, we'll create a serial solver and go.
-        auto result = timer::time([]() -> bool {
+    uint64_t runRandom = subSeedGenerator(generator);
 
-        });
-    } else {
-        // runs MPI Algorithm.
+    for (size_t trial = 0; trial < numTrials; ++trial) {
+        // now that we have our dataset, we can actually go to the correct function.
+        // note, we are implicitly going to be calling our serial code when world size is one
+        if (worldCommunicator.size() == 1) {
+            // runs serial algorithm
+            // for the serial algorithm, we'll create a serial solver and go.
+            // we don't actually want to time anything other than run, so we'll set it all up first
+            kmeans::SerialSolver::Config config(
+                maxIterations,
+                convergenceThreshold,
+                kmeans::DataSet(dataSet.getPoints()),
+                runRandom,
+                numTrueClusters
+            );
+
+            // create the solver
+            kmeans::SerialSolver solver(config);
+
+            // and solve
+            auto time = timer::time([&solver] {
+                solver.run();
+            });
+
+            // now print our results
+            if (worldCommunicator.rank() == 0) {
+                ds  << worldCommunicator.size() << ','
+                    << numGeneratedSamples << ','
+                    << numDimensions << ','
+                    << numTrueClusters << ','
+                    << clusterSpread << ','
+                    << globalSeed << ','
+                    << time.getTimeSecondsDouble() << ','
+                    << (maxIterations == solver.getFinalIterationCount()) << ','
+                    << kmeans::getMaxCentroidDifference(solver.getCalculatedCentroidsAtCompletion().value(), dataSet.getKnownGoodCentroids().value()) << std::endl;;
+            }
+        } else {
+            // runs MPI Algorithm.
+        }
     }
 
 

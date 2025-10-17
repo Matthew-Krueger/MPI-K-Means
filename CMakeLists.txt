@@ -35,6 +35,7 @@ add_executable(kmeans_mpi
         src/mpi/MPITester.cpp
         src/mpi/MPITester.hpp
         src/shared/Timer.cpp
-        src/shared/Timer.hpp)
+        src/shared/Timer.hpp
+        src/shared/DualOutputStream.hpp)
 
 target_link_libraries(kmeans_mpi PRIVATE MPI::MPI_CXX ${Boost_LIBRARIES})

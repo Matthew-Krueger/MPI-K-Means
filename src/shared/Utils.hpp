@@ -59,6 +59,24 @@ namespace kmeans {
 
     }
 
+    inline double getMaxCentroidDifference(const std::vector<Point>& lhs, const std::vector<Point>& rhs) {
+
+        auto centroidCombinedView = std::ranges::views::zip(lhs, rhs);
+        auto distances = std::ranges::transform_view(
+            centroidCombinedView,
+            [](auto && pair) {
+                if (auto distance = std::get<0>(pair).calculateEuclideanDistance(std::get<1>(pair)); distance.has_value()) {
+                    return *distance;
+                }else {
+                    throw std::runtime_error("Distance was not calculated");
+                }
+            }
+        );
+
+        return std::ranges::max(distances);
+
+    }
+
 }
 
 #endif //KMEANS_MPI_UTILS_HPP
