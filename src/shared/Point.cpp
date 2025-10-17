@@ -13,13 +13,13 @@
 #include "Instrumentation.hpp"
 
 namespace kmeans {
-    std::expected<double, std::string> Point::calculateEuclideanDistance(const Point &other) const {
+    double Point::calculateEuclideanDistance(const Point &other) const {
         // don't profile the time is insignificant
         //PROFILE_FUNCTION();
 
         // Guard against dimension mismatch.
         if (m_Data.size() != other.m_Data.size()) {
-            return std::unexpected(
+            throw std::invalid_argument(
                 "Dimensions mismatch. This has " + std::to_string(m_Data.size()) + " dimensions, that has " +
                 std::to_string(other.m_Data.size()) + " dimensions.");
         }
@@ -47,19 +47,19 @@ namespace kmeans {
         return std::sqrt(totalSum);
     }
 
-    std::expected<Point::FlattenedPoints, std::string> Point::flattenPoints(const std::vector<Point> &points) {
+    Point::FlattenedPoints Point::flattenPoints(const std::vector<Point> &points) {
         PROFILE_FUNCTION();
 
         // Return an error if no points are provided.
         if (points.empty()) {
-            return std::unexpected("No points provided");
+            throw std::invalid_argument("No points provided");
         }
 
         // Get the first point's dimensionality, which becomes the expected dimensionality
         const size_t expectedNumberDimensions = points[0].m_Data.size();
 
         if (expectedNumberDimensions == 0) {
-            return std::unexpected("Expected Dimensionality cannot be zero");
+            throw std::invalid_argument("Expected Dimensionality cannot be zero");
         }
 
         // Check if all points in the vector have the expected number of dimensions.
@@ -70,7 +70,7 @@ namespace kmeans {
 
         // Return an error if not all points have the same number of dimensions.
         if (!allHaveRequiredNumberDimensions) {
-            return std::unexpected("All points must have the same number of dimensions");
+            throw std::invalid_argument("All points must have the same number of dimensions");
         }
 
         // Construct a result view by joining the data of all points.
@@ -86,8 +86,7 @@ namespace kmeans {
         };
     }
 
-    std::expected<std::vector<Point>, std::string>
-    Point::unflattenPoints(const FlattenedPoints &flattenedPoints) {
+    std::vector<Point> Point::unflattenPoints(const FlattenedPoints &flattenedPoints) {
         PROFILE_FUNCTION();
 
         // Validate that the total number of elements in the flattened vector matches the expected count.
@@ -95,7 +94,7 @@ namespace kmeans {
         const size_t totalEntries = flattenedPoints.numDimensionsPerPoint * flattenedPoints.numPoints;
         // Check if the actual size of the flattened points vector matches the expected total entries.
         if (flattenedPoints.points.size() != totalEntries) {
-            return std::unexpected(
+            throw std::invalid_argument(
                 "Flattened points vector size mismatch. Expected " +
                 std::to_string(totalEntries) + " (" +
                 std::to_string(flattenedPoints.numPoints) + " points * " +
@@ -122,12 +121,12 @@ namespace kmeans {
         return result;
     }
 
-    std::expected<ClusterLocalAggregateSum, std::string> ClusterLocalAggregateSum::calculateCentroidLocalSum(const std::vector<Point> &points) {
+    ClusterLocalAggregateSum ClusterLocalAggregateSum::calculateCentroidLocalSum(const std::vector<Point> &points) {
         PROFILE_FUNCTION();
 
         // Return an error if no points are provided. This should still run in critical paths.
         if (points.empty()) {
-            return std::unexpected("No points provided");
+            throw std::invalid_argument("No points provided");
         }
 
         // Get the first point's dimensionality, which becomes the expected dimensionality
@@ -138,7 +137,7 @@ namespace kmeans {
 
 
         if (expectedNumberDimensions == 0) {
-            return std::unexpected("Expected Dimensionality cannot be zero");
+            throw std::invalid_argument("Expected Dimensionality cannot be zero");
         }
 
         // Check if all points in the vector have the expected number of dimensions.
@@ -149,7 +148,7 @@ namespace kmeans {
 
         // Return an error if not all points have the same number of dimensions.
         if (!allHaveRequiredNumberDimensions) {
-            return std::unexpected("All points must have the same number of dimensions");
+            throw std::invalid_argument("All points must have the same number of dimensions");
         }
 
 #endif
@@ -225,11 +224,9 @@ namespace kmeans {
         // iterate through the other vector, and find the closest point to this one.
         // this was one function that should not be functional, for unknown reasons
         for (auto it = other.begin(); it != other.end(); ++it) {
-            auto dist = calculateEuclideanDistance(*it);
-
             // if and only if the value is less than minDist, and if and only if it has a value
-            if (dist.has_value() && dist.value() < minDist) {
-                minDist = dist.value();
+            if (auto dist = calculateEuclideanDistance(*it); dist < minDist) {
+                minDist = dist;
                 minIter = it;
                 foundValid = true;
             }

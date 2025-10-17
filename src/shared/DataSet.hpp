@@ -5,10 +5,9 @@
 #ifndef KMEANS_MPI_DATASET_HPP
 #define KMEANS_MPI_DATASET_HPP
 #include <vector>
-#include <string>
-#include <expected>
 #include <random>
 #include <optional>
+#include <algorithm>
 #include <boost/random/normal_distribution.hpp>
 
 
@@ -101,16 +100,8 @@ namespace kmeans {
         inline const Point& operator[](const size_t index) const { return m_Points[index]; }
         inline std::optional<std::vector<Point>>& getKnownGoodCentroids() { return m_KnownGoodCentroids; }
 
-        inline std::expected<Point::FlattenedPoints, std::string> flattenDataset() { return Point::flattenPoints(m_Points); };
-        inline static std::expected<DataSet, std::string> unflattenDataset(const Point::FlattenedPoints &flattenedPoints) {
-
-            PROFILE_FUNCTION();
-
-            return Point::unflattenPoints(flattenedPoints).transform([](std::vector<Point>&& points) {
-                PROFILE_FUNCTION();
-                return DataSet(std::move(points));
-            });
-        };
+        inline Point::FlattenedPoints flattenDataset() { return Point::flattenPoints(m_Points); };
+        inline static std::vector<Point> unflattenDataset(const Point::FlattenedPoints &flattenedPoints) { return Point::unflattenPoints(flattenedPoints); };
 
         using iterator = std::vector<Point>::iterator;
         using const_iterator = std::vector<Point>::const_iterator;

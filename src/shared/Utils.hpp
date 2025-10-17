@@ -52,11 +52,7 @@ namespace kmeans {
             centroidCombinedView.end(),
             [epsilon](auto && pair) {
                 auto result = std::get<0>(pair).calculateEuclideanDistance(std::get<1>(pair));
-                if (!result.has_value()) {
-                    return false;
-                }else {
-                    return std::fabs(*result) < *epsilon;
-                }
+                return std::fabs(result) < *epsilon;
             });
 
     }
