@@ -13,6 +13,7 @@
 #include <variant>
 #include <cstring>
 #include <sstream>
+#include <functional>
 
 //#define BUILD_WITH_PROFILING
 
