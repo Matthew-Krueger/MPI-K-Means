@@ -7,9 +7,7 @@
 #include "shared/Point.hpp"
 #include "shared/Instrumentation.hpp"
 #include <boost/program_options.hpp>
-#include <__ranges/iota_view.h>
-#include <__ranges/transform_view.h>
-
+#include <ranges>
 #include "shared/Timer.hpp"
 #include "shared/DualOutputStream.hpp"
 #include "shared/Utils.hpp"
