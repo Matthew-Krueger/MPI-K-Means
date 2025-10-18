@@ -11,6 +11,11 @@
 #include "shared/Timer.hpp"
 #include "shared/DualOutputStream.hpp"
 #include "shared/Utils.hpp"
+#ifdef DEBUG_FLAG
+#undef DEBUG_FLAG
+#endif
+#define DEBUG_FLAG true
+
 
 int main(int argc, char **argv) {
     DEBUG_PRINT("Creating MPI Environment");
@@ -117,6 +122,19 @@ int main(int argc, char **argv) {
 
     }
 
+    if constexpr (DEBUG_FLAG) {
+        if (worldCommunicator.rank() == 0) {
+            // if we are the main rank, print all centroids
+            std::cout << "Known Good Centroids:" << std::endl;
+            std::ranges::for_each(
+                *dataSet.getKnownGoodCentroids(),
+                [](auto &point) {
+                    std::cout << '\t' << point << "\n";
+                }
+            );
+        }
+    }
+
     uint64_t runRandom = subSeedGenerator(generator);
 
     for (size_t trial = 0; trial < numTrials; ++trial) {
@@ -155,6 +173,20 @@ int main(int argc, char **argv) {
                     << solver.getFinalIterationCount().value_or(0) << ','
                     << kmeans::getMaxCentroidDifference(solver.getCalculatedCentroidsAtCompletion().value(), dataSet.getKnownGoodCentroids().value()) << std::endl;;
             }
+
+            if constexpr (DEBUG_FLAG) {
+                if (worldCommunicator.rank() == 0) {
+                    // if we are the main rank, print all centroids
+                    std::cout << "Calculated Centroids:" << std::endl;
+                    std::ranges::for_each(
+                        *solver.getCalculatedCentroidsAtCompletion(),
+                        [](auto &point) {
+                            std::cout << '\t' << point << "\n";
+                        }
+                    );
+                }
+            }
+
         } else {
             // runs MPI Algorithm.
             kmeans::MPISolver::Config config(
@@ -183,6 +215,19 @@ int main(int argc, char **argv) {
                     << ((maxIterations == solver.getFinalIterationCount()) ? "no" : "yes") << ','
                     << solver.getFinalIterationCount().value_or(0) << ','
                     << kmeans::getMaxCentroidDifference(solver.getCalculatedCentroidsAtCompletion().value(), dataSet.getKnownGoodCentroids().value()) << std::endl;
+            }
+
+            if constexpr (DEBUG_FLAG) {
+                if (worldCommunicator.rank() == 0) {
+                    // if we are the main rank, print all centroids
+                    std::cout << "Calculated Centroids:" << std::endl;
+                    std::ranges::for_each(
+                        *solver.getCalculatedCentroidsAtCompletion(),
+                        [](auto &point) {
+                            std::cout << '\t' << point << "\n";
+                        }
+                    );
+                }
             }
 
         }
