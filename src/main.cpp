@@ -11,11 +11,6 @@
 #include "shared/Timer.hpp"
 #include "shared/DualOutputStream.hpp"
 #include "shared/Utils.hpp"
-#ifdef DEBUG_FLAG
-#undef DEBUG_FLAG
-#endif
-#define DEBUG_FLAG true
-
 
 int main(int argc, char **argv) {
     DEBUG_PRINT("Creating MPI Environment");
