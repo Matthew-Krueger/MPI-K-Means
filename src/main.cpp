@@ -53,13 +53,24 @@ int main(int argc, char **argv) {
         boost::program_options::store(parsed_options, vm);
         boost::program_options::notify(vm);
 
-        if (vm.contains("help"))
+        if (vm.contains("help")) {
             std::cout << desc << '\n';
+            return 0;
+        }
 
 
     } catch (const boost::program_options::error &e) {
         std::cerr << e.what() << std::endl;
         return 1;
+    }
+
+    // Creating my DualStream
+    DualStream ds(std::cout, filename);
+
+    // print the table header
+    if (printHeader && worldCommunicator.rank() == 0) {
+        ds << "Number Processes," << "Number Samples," << "Number Dimensions," << "Number Clusters," << "Spread," << "Seed," << "Run Time (s)," << "Did Reach Convergence?," << "Iteration Count," << "Max Centroid Difference" << std::endl;
+        return 0; // exit after writing the header
     }
 
     auto writer = new instrumentation::MPIWriter(instrumentation::MPIWriter::Config{
@@ -106,14 +117,6 @@ int main(int argc, char **argv) {
 
     }
 
-    // Creating my DualStream
-    DualStream ds(std::cout, filename);
-
-    // print the table header
-    if (printHeader && worldCommunicator.rank() == 0) {
-        ds << "Number Processes," << "Number Samples," << "Number Dimensions," << "Number Clusters," << "Spread," << "Seed," << "Run Time (s)," << "Did Reach Convergence?," << "Max Centroid Difference" << std::endl;
-    }
-
     uint64_t runRandom = subSeedGenerator(generator);
 
     for (size_t trial = 0; trial < numTrials; ++trial) {
@@ -148,7 +151,8 @@ int main(int argc, char **argv) {
                     << clusterSpread << ','
                     << globalSeed << ','
                     << time.getTimeSecondsDouble() << ','
-                    << ((maxIterations == solver.getFinalIterationCount()) ? "yes" : "no") << ','
+                    << ((maxIterations == solver.getFinalIterationCount()) ? "no" : "yes") << ','
+                    << solver.getFinalIterationCount().value_or(0) << ','
                     << kmeans::getMaxCentroidDifference(solver.getCalculatedCentroidsAtCompletion().value(), dataSet.getKnownGoodCentroids().value()) << std::endl;;
             }
         } else {
@@ -176,7 +180,8 @@ int main(int argc, char **argv) {
                     << clusterSpread << ','
                     << globalSeed << ','
                     << time.getTimeSecondsDouble() << ','
-                    << (maxIterations == solver.getFinalIterationCount()) << ','
+                    << ((maxIterations == solver.getFinalIterationCount()) ? "no" : "yes") << ','
+                    << solver.getFinalIterationCount().value_or(0) << ','
                     << kmeans::getMaxCentroidDifference(solver.getCalculatedCentroidsAtCompletion().value(), dataSet.getKnownGoodCentroids().value()) << std::endl;
             }
 
