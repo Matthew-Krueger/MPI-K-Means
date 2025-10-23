@@ -395,7 +395,6 @@ to speed up computations to the maximum extent possible.
 *   [X] Build system (`CMakeLists.txt`)
 *   [X] SLURM scripts for OSC
 *   [X] Benchmark data (CSV in `/Results` directory)
-*   [X] LLM Transcripts (Linked in `README.md` or included in `/Transcripts` directory)
 *   [X] `README.md` (This report, following the specified sections)
 
 ---
