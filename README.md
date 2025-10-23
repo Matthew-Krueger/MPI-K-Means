@@ -1,9 +1,20 @@
-# MPI Assignment Report: Parallel K-Means Clustering
-
-**Author:** Matthew Krueger
-**Date:** October 17, 2022
-
 ---
+title: MPI - K-Means Clustering
+author: Matthew Krueger <contact@matthewkrueger.com>
+description: Exploration into the GPG platform and how to use it
+slug: 20251023-kmeans-mpi
+date: 2025-10-23
+categories:
+- Portfolio
+- MPI
+- Boost
+- Clustering
+- K-Means
+weight: 1       # You can add weight to some posts to override the default sorting (date descending)
+---
+
+## 0. GitHub Repository
+The repository for this project can be found [here](https://github.com/Matthew-Krueger/MPI-K-Means/tree/main).
 
 ## 1. Summary
 This report describes the implementation and parallelization of K-Means Clustering using MPI, vs. serial execution.
@@ -31,14 +42,14 @@ demarcated by a specified tolerance (epsilon).
 
 K-Means clustering (Lloyd's algorithm) was chosen for this assignment due to its popularity in big data analytics,
 as well as its simplicity and ease of implementation.
-K-Means can be written trivially in both serial and parall form, both of which were implemented for comparison.
+K-Means can be written trivially in both serial and parallel form, both of which were implemented for comparison.
 Both the serial and parallel implementations are written in C++23 (preview) and validated to work with GCC 13.2.0.
 However, you may have better luck on a more modern version of the compiler with full support for C++23.
 
-C++23 was chosen for this assignemnt as it provides a variety of useful features that work together to save memory
+C++23 was chosen for this assignment as it provides a variety of useful features that work together to save memory
 and make the code read more functionally.
 Tab-Autocomplete was used extensively throughout this assignment for help with functional design.
-The list of features used includes:
+The list of features used includes (but is not limited to):
 *   `std::optional`
 *   `std::variant`
 *   `std::accumulate`
@@ -47,7 +58,6 @@ The list of features used includes:
 *   `std::ranges::transform`
 *   `std::ranges::view::iota`
 *   `std::ranges::view::transform`
-among others.
 
 Specifically, these features were chosen due to their utility in regard to delayed explanation and optimization
 for inline computation and auto vectorization.
@@ -55,7 +65,7 @@ Due to the way in which these functional features are implemented,
 they rely on values being move constructable and largely contiguous in memory.
 This allows for the compiler to perform optimizations that are otherwise impossible.
 It also allows for Link Time Optimization (LTO) to optimize further in the final binary.
-In doing this, the program execution time can be reduced significantly by utalizing the full power of the CPU.
+In doing this, the program execution time can be reduced significantly by using the full power of the CPU.
 On my M1 Pro Mac, this uses NEON instructions, and on the OSC cluster, it uses AVX512 instructions.
 
 Importantly, these optimizations require the value to be move-constructable.
@@ -97,7 +107,7 @@ template<typename FuncToTime>
 std::enable_if_t<!std::is_void_v<std::invoke_result_t<FuncToTime>>, TimeResult<std::invoke_result_t<FuncToTime>>>
         time(FuncToTime toTime);
         
-template<typename FuncToTime>        
+template<typename FuncToTime>
 std::enable_if_t<std::is_void_v<std::invoke_result_t<FuncToTime>>, TimeResult<void>>
         time(FuncToTime toTime);
 ```
@@ -111,7 +121,7 @@ auto timeResult = time([&]{
 });
 std::cout << "Time taken: " << timeResult.getTimeSecondsDouble() << " seconds" << std::endl;
 ```
-If your function returns a value, it will automatically be placed in TimeResult<T>::functionResult.
+If your function returns a value, it will automatically be placed in `TimeResult<T>::functionResult`.
 If your function returns void, functionResult will not be present.
 
 Other important design considerations include:
@@ -141,12 +151,12 @@ From there the process repeats.
 
 ### 2.3 Considerations for Parallelization
 
-I attempted to discriminate based on what was "worth it" and what was not to parallize.
+I attempted to discriminate based on what was "worth it" and what was not to parallelize.
 In a large dataset with a high K (number of clusters), the cost of division is likely to be much higher
 and may benefit from problem partitioning. However, this would substantially increase the amount of
-communication and setup time for the allreduce operaations and may not be worth it for K below a few thousand.
+communication and setup time for the allreduce operations and may not be worth it for K below a few thousand.
 
-In lower dimensional spaces with many hundreds or thousands of K, it may be worth it to set up a K-D search space
+In lower dimensional spaces with many hundreds or thousands of K, it may be worth setting up a K-D search space
 that is able to prune the search space significantly.
 However, in higher dimensional spaces, this may not be worth it, and without many hundreds of thousands of K,
 the cost of setting up that data structure may not be worth it either.
@@ -160,7 +170,7 @@ benefit.
 
 ### 3.1. Experiment Setup
 
-I ran my experiment on the OSC (Ohio Supercomputing Center) Cerdinal Cluster.
+I ran my experiment on the OSC (Ohio Supercomputing Center) Cardinal Cluster.
 Details of the hardware can be found [on their website](https://www.osc.edu/resources/technical_support/supercomputers/cardinal).
 I did not request any specific hardware, only 10 processes distributed in whatever way the scheduler chose.
 I used `openmpi/5.0.2`, `boost/1.83.0`, `cmake/3.25.2`, and `gcc/13.2.0`.
@@ -194,9 +204,10 @@ All statistical analysis was done on Apple Numbers, and is included in the `/Res
 
 The results of the run are as follows:
 
-#### 3.2.1. Results for 1000000 Samples, 25 Dimensions, 50 Clusters, Process Count 1-10
+#### 3.2.1. Results for 1,000,000 Samples, 25 Dimensions, 50 Clusters, Process Count 1-10
+
 | Number Processes | Number Samples (Average) | Number Dimensions (Average) | Number Clusters (Average) | Spread (Average) | Seed (Average) | Run Time (s) (Average) | Run Time (s) (STDEV) | Iteration Count (Average) | Speedup | Efficiency | Karp-Flatt |
-| :--------------- | :----------------------- | :-------------------------- | :------------------------ | :--------------- | :------------- | :--------------------- | :------------------- | :------------------------ | :------ | :--------- | :--------- |
+|:-----------------|:-------------------------|:----------------------------|:--------------------------|:-----------------|:---------------|:-----------------------|:---------------------|:--------------------------|:--------|:-----------|:-----------|
 | 1                | 1000000                  | 25                          | 50                        | 3.5              | 1234           | 147.6953               | 1.16058501052989     | 250                       | 1.000   | 100.000%   |            |
 | 2                | 1000000                  | 25                          | 50                        | 3.5              | 1234           | 75.18676               | 0.228644552866574    | 250                       | 1.964   | 98.219%    | 0.018      |
 | 3                | 1000000                  | 25                          | 50                        | 3.5              | 1234           | 50.24906               | 0.23718394268303     | 250                       | 2.939   | 97.975%    | 0.010      |
@@ -209,20 +220,20 @@ The results of the run are as follows:
 | 10               | 1000000                  | 25                          | 50                        | 3.5              | 1234           | 15.1942                | 0.0357178589006178   | 250                       | 9.720   | 97.205%    | 0.003      |
 
 
-#### Speedup for 1000000 Samples, 25 Dimensions, 50 Clusters, Process Count 1-10
-![Speedup Plot](Results/Speedup.png)
+#### Speedup for 1,000,000 Samples, 25 Dimensions, 50 Clusters, Process Count 1-10
+![Speedup Plot](/20251023-mpi-k-means/Speedup.png)
 
-#### Efficiency for 1000000 Samples, 25 Dimensions, 50 Clusters, Process Count 1-10
-![Efficiency Plot](Results/Efficiency.png)
+#### Efficiency for 1,000,000 Samples, 25 Dimensions, 50 Clusters, Process Count 1-10
+![Efficiency Plot](/20251023-mpi-k-means/Efficiency.png)
 
-#### Karp-Flatt for 1000000 Samples, 25 Dimensions, 50 Clusters, Process Count 1-10
-![Karp-Flatt Plot](Results/Karp-Flatt.png)
+#### Karp-Flatt for 1,000,000 Samples, 25 Dimensions, 50 Clusters, Process Count 1-10
+![Karp-Flatt Plot](/20251023-mpi-k-means/Karp-Flatt.png)
 
-#### Run Time (Seconds) for 1000000 Samples, 25 Dimensions, 50 Clusters, Process Count 1-10
-![Run Time Plot](Results/Runtime-seconds.png)
+#### Run Time (Seconds) for 1,000,000 Samples, 25 Dimensions, 50 Clusters, Process Count 1-10
+![Run Time Plot](/20251023-mpi-k-means/Runtime-seconds.png)
 
-#### Run Time (Seconds, STDEV) for 1000000 Samples, 25 Dimensions, 50 Clusters, Process Count 1-10
-![Run Time Plot](Results/Runtime-seconds-sigma.png)
+#### Run Time (Seconds, STDEV) for 1,000,000 Samples, 25 Dimensions, 50 Clusters, Process Count 1-10
+![Run Time Plot](/20251023-mpi-k-means/Runtime-seconds-sigma.png)
 
 ### 3.3. Interpretation of Results
 
@@ -236,9 +247,10 @@ inherently sequential portion of the algorithm).
 While I do not have an exact answer to this, I would suspect this is due to a very heavy GPU job running on the
 cluster at the same time.
 It was using over 600GB/s of bandwidth on infiniband, with all but 4 GPUs at 100% utilization.
-This could cause some cache locality issues with fewer processes (taking longer to loop and thus invalidating cache).
-It could have also been due to the HBM memory cache being able to keep my data entirely local in cache as per
-rank dataset size decreased, decreasing latency for arithmatic options.
+This could cause some cache locality issues with fewer processes
+(taking longer to loop and thus invalidating the cache).
+It could have also been due to the HBM memory cache being able to keep my data entirely local in the cache as per
+rank dataset size decreased, decreasing latency for arithmetic options.
 In other words, there was a heavy job going on in the cluster, and it may have affected it, or at least the cache
 locality of the data, especially for larger datasets.
 
@@ -348,12 +360,12 @@ Calculated Centroids:
 ### 5.1. Learning Experience
 
 I learned that while a problem appears simple on the surface, it may be more complex than you think.
-For example, K-Means is a basic algorithm and relatively trivial to parallize.
+For example, K-Means is a basic algorithm and relatively trivial to parallelize.
 However, the specific details of the operations are very detailed and require careful thought and planning.
 
 I also learned that C++23 does make life easier, but it does come at a cost of complexity.
-Much of the pipeline code I wrote is substantially longer than it would be if I had done it the old fashioned way.
-However, in the end result, it often yeilds a more performant result.
+Much of the pipeline code I wrote is substantially longer than it would be if I had done it the old-fashioned way.
+However, in the end result, it often yields a more performant result.
 
 I did also learn that the C++23 features are **NOT** a silver bullet capable of solving all problems.
 I had several places in my code where the fancy C++23 features
